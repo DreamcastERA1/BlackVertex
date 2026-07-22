@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "org.blackaddons.blackvertex.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "FeatureRenderDispatcherMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

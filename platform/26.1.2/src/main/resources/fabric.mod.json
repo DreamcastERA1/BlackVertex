@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "blackvertex",
+  "version": "${version}",
+  "name": "BlackVertex",
+  "description": "Renders skeletal, animated meshes on players as cosmetics — GPU bone skinning with automatic CPU fallback.",
+  "authors": ["BlackAddons Team"],
+  "contact": {
+    "sources": "https://github.com/DreamcastERA1/BlackVertex",
+    "issues": "https://github.com/DreamcastERA1/BlackVertex/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/blackvertex/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "org.blackaddons.blackvertex.client.BlackvertexClient"
+    ]
+  },
+  "mixins": [
+    "blackvertex.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-language-kotlin": ">=${kotlin_loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
