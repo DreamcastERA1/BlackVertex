@@ -1,6 +1,7 @@
 package org.blackaddons.blackvertex.texture
 
 import com.mojang.blaze3d.platform.NativeImage
+import kotlin.math.roundToInt
 
 object TextureCompositor {
 
@@ -62,6 +63,55 @@ object TextureCompositor {
             }
         }
         return out
+    }
+
+    /**
+     * Bake the emissive (glow) [layers] into a mostly-transparent image: each layer contributes
+     * `rgb = tint ⊗ overlayRGB` where its alpha mask is set, source-over combined; rendered later as a
+     * separate fullbright pass (the glowing tip). Alpha-supporting layers honor the tint's alpha as a
+     * per-layer opacity, like [compose]. Returns null when there are no emissive layers; the caller
+     * owns the result. Inputs are not closed.
+     */
+    fun composeEmissive(layers: List<Layer>): NativeImage? {
+        if (layers.isEmpty()) return null
+        val w = layers.first().image.width
+        val h = layers.first().image.height
+        val out = IntArray(w * h) // ARGB, starts fully transparent
+
+        for (layer in layers) {
+            val img = layer.image
+            val tR = argbR(layer.tintArgb); val tG = argbG(layer.tintArgb); val tB = argbB(layer.tintArgb)
+            val tintA = if (layer.supportsAlpha) argbA(layer.tintArgb) else 255
+            for (y in 0 until h) {
+                for (x in 0 until w) {
+                    if (x >= img.width || y >= img.height) continue
+                    val sp = img.getPixel(x, y)
+                    var a = if (layer.invertAlpha) 255 - argbA(sp) else argbA(sp)
+                    if (tintA != 255) a = a * tintA / 255
+                    if (a == 0) continue
+                    // Accent = tint modulated by the overlay's (white) RGB.
+                    val sr = tR * argbR(sp) / 255
+                    val sg = tG * argbG(sp) / 255
+                    val sb = tB * argbB(sp) / 255
+                    val idx = y * w + x
+                    val dp = out[idx]
+                    val sa = a / 255f
+                    val da = argbA(dp) / 255f
+                    val oa = sa + da * (1f - sa)
+                    if (oa <= 0f) continue
+                    val r = ((sr * sa + argbR(dp) * da * (1f - sa)) / oa).roundToInt().coerceIn(0, 255)
+                    val g = ((sg * sa + argbG(dp) * da * (1f - sa)) / oa).roundToInt().coerceIn(0, 255)
+                    val b = ((sb * sa + argbB(dp) * da * (1f - sa)) / oa).roundToInt().coerceIn(0, 255)
+                    val na = (oa * 255f).roundToInt().coerceIn(0, 255)
+                    out[idx] = (na shl 24) or (r shl 16) or (g shl 8) or b
+                }
+            }
+        }
+
+        val image = NativeImage(w, h, false)
+        var idx = 0
+        for (y in 0 until h) for (x in 0 until w) image.setPixel(x, y, out[idx++])
+        return image
     }
 
     private fun argbA(c: Int) = (c ushr 24) and 0xFF
