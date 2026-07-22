@@ -17,6 +17,7 @@ import org.blackaddons.blackvertex.api.attach.Attachment
 import org.blackaddons.blackvertex.api.attach.FollowPart
 import org.blackaddons.blackvertex.render.gpu.BlackVertexGpu
 import org.blackaddons.blackvertex.render.gpu.DrawMode
+import java.util.UUID
 
 // Feature layer that draws every registered PlayerCosmetic on a player, through the GPU
 // path when available and the CPU skinner otherwise.
@@ -53,10 +54,15 @@ internal class BlackVertexCosmeticLayer(
         if (palettes.size > MAX_CACHED_PALETTES) palettes.clear()
 
         val overlay = LivingEntityRenderer.getOverlayCoords(state, 0.0f)
+        // Resolve the rendered player's UUID once: it targets per-player cosmetics and seeds the phase.
+        val selfUuid = Minecraft.getInstance().level?.getEntity(state.id)?.uuid
         // Double until the final wrap: Float alone loses frame precision after hours of uptime.
-        val elapsed = (System.nanoTime() - START_NANOS) / 1_000_000_000.0 + phaseOffset(state.id)
+        val elapsed = (System.nanoTime() - START_NANOS) / 1_000_000_000.0 + phaseOffset(selfUuid, state.id)
 
         for (cosmetic in cosmetics) {
+            // Per-player targeting: uuid pins to one player, visibleFor is an extra gate; null = draw on all.
+            if (cosmetic.uuid != null && cosmetic.uuid != selfUuid) continue
+            if (cosmetic.visibleFor?.invoke(state) == false) continue
             val palette = palettes.getOrPut(PaletteKey(cosmetic, state.id)) { PosePalette(cosmetic.model.skeleton) }
             val clip = cosmetic.clip?.let { cosmetic.model.animations[it] }
             palette.update(clip, clipTime(elapsed * cosmetic.speed, clip?.durationSeconds ?: 0f))
@@ -106,8 +112,7 @@ internal class BlackVertexCosmeticLayer(
 
     // Deterministic per-player phase, seeded by the entity UUID (stable across sessions);
     // entity id is the fallback when the entity is already gone from the level.
-    private fun phaseOffset(entityId: Int): Float {
-        val uuid = Minecraft.getInstance().level?.getEntity(entityId)?.uuid
+    private fun phaseOffset(uuid: UUID?, entityId: Int): Float {
         val h = uuid?.hashCode() ?: entityId
         return (h and 0xFFFF) * 0.001f // 0..65.5s, far past any clip length
     }

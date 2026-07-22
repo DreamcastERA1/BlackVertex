@@ -9,6 +9,7 @@ import net.minecraft.resources.Identifier
 import org.blackaddons.blackvertex.api.attach.Attachment
 import org.blackaddons.blackvertex.api.model.Model
 import org.blackaddons.blackvertex.render.gpu.BlackVertexGpu
+import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -25,6 +26,9 @@ import java.util.concurrent.CopyOnWriteArrayList
  *                    a fade or flash can be driven per frame.
  * @param speed       animation playback speed multiplier (1 = authored speed)
  * @param attach      where/how the model sits on the player; mutable for runtime tuning
+ * @param uuid        draw only on the player with this UUID; null = every player (the demo default)
+ * @param visibleFor  extra per-player gate on the rendered state; null = no extra gate. Combined with
+ *                    [uuid] by AND — the cosmetic draws only when both pass.
  */
 class PlayerCosmetic(
     val model: Model,
@@ -35,6 +39,8 @@ class PlayerCosmetic(
     var color: Int = 0xFFFFFFFF.toInt(),
     val speed: Float = 1f,
     var attach: Attachment = Attachment(),
+    val uuid: UUID? = null,
+    val visibleFor: ((AvatarRenderState) -> Boolean)? = null,
 )
 
 /**
