@@ -1,6 +1,7 @@
 package org.blackaddons.blackvertex.render
 
 import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback
+import net.minecraft.client.Minecraft
 import net.minecraft.client.model.player.PlayerModel
 import net.minecraft.client.renderer.entity.RenderLayerParent
 import net.minecraft.client.renderer.entity.player.AvatarRenderer
@@ -56,6 +57,16 @@ object PlayerCosmetics {
      * `Float.MAX_VALUE` disables the cut-off.
      */
     var renderDistanceBlocks: Float = 32f
+
+    /**
+     * How the layer maps a render state to the player's UUID (for per-player targeting). The default
+     * reads the world entity by its id, which fails for an off-world preview — a GUI portrait of an
+     * unspawned fake player. A consuming mod that stashes the UUID on the render state (via a mixin)
+     * can point this at that, so previews target correctly too.
+     */
+    var uuidResolver: (AvatarRenderState) -> UUID? = { state ->
+        Minecraft.getInstance().level?.getEntity(state.id)?.uuid
+    }
 
     // The layer iterates this every frame; snapshot semantics of COW keep add/remove safe
     // from any thread. Exposed internally to avoid a defensive copy per player per frame.
