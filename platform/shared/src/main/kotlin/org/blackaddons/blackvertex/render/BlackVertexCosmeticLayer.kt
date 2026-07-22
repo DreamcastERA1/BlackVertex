@@ -2,7 +2,6 @@ package org.blackaddons.blackvertex.render
 
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
-import net.minecraft.client.Minecraft
 import net.minecraft.client.model.player.PlayerModel
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.entity.LivingEntityRenderer
@@ -55,7 +54,7 @@ internal class BlackVertexCosmeticLayer(
 
         val overlay = LivingEntityRenderer.getOverlayCoords(state, 0.0f)
         // Resolve the rendered player's UUID once: it targets per-player cosmetics and seeds the phase.
-        val selfUuid = Minecraft.getInstance().level?.getEntity(state.id)?.uuid
+        val selfUuid = PlayerCosmetics.uuidResolver(state)
         // Double until the final wrap: Float alone loses frame precision after hours of uptime.
         val elapsed = (System.nanoTime() - START_NANOS) / 1_000_000_000.0 + phaseOffset(selfUuid, state.id)
 
