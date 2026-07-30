@@ -7,18 +7,15 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * 26.1.2 has no way for a mod to put its own render pass into the submit pipeline — {@code
+ * FeatureRendererType} arrived in 26.2 — so the GPU cosmetics path is driven from here instead.
+ * Both draw hooks fire once per feature-render scope, which is all {@link GpuCosmetics} needs:
+ * the world pass reaches them through {@code LevelRenderer}, and every GUI portrait through
+ * {@code GuiEntityRenderer.renderAllFeatures}, which calls the same two methods.
+ */
 @Mixin(FeatureRenderDispatcher.class)
 public class FeatureRenderDispatcherMixin {
-
-    @Inject(method = "renderAllFeatures", at = @At("HEAD"))
-    private void blackvertex$enterRenderAll(CallbackInfo ci) {
-        GpuCosmetics.INSTANCE.beginRenderAll();
-    }
-
-    @Inject(method = "renderAllFeatures", at = @At("TAIL"))
-    private void blackvertex$exitRenderAll(CallbackInfo ci) {
-        GpuCosmetics.INSTANCE.endRenderAll();
-    }
 
     @Inject(method = "renderSolidFeatures", at = @At("TAIL"))
     private void blackvertex$drawSolid(CallbackInfo ci) {

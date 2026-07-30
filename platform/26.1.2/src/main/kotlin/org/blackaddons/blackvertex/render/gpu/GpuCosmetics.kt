@@ -126,28 +126,25 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
     }
 
     private val queue = ArrayList<Draw>()
-    private var prepared: List<PreparedDraw<Tex>> = emptyList()
-    private var preparedThisFrame = false
 
-    // The world pass calls renderSolidFeatures/renderTranslucentFeatures DIRECTLY; the first-person
-    // hand and screen-effects passes call them WRAPPED in renderAllFeatures (under a HUD-FOV
-    // projection with a cleared depth buffer). This flag, set while inside renderAllFeatures, is the
-    // real invariant that tells the two apart — so we draw only on the direct (world) calls.
-    private var inRenderAll = false
+    // Draws already flushed this frame, and this scope's prepared tail.
+    //
+    // A frame runs several feature-render scopes — the world pass, then a GUI portrait per PiP, the
+    // first-person hand — and each ends in the renderSolid/renderBlended pair below. The queue is only
+    // emptied at endFrame, so a scope must draw ONLY what was submitted since the previous one ended,
+    // or it repaints the whole world's cosmetics into itself. That is the entire invariant: no scope
+    // needs to know which one it is. (It used to guess, by whether it sat inside renderAllFeatures,
+    // and got it wrong — GUI PiPs go through renderAllFeatures too, so every portrait drew nothing.)
+    private var flushed = 0
+    private var scope: List<PreparedDraw<Tex>> = emptyList()
 
-    /** Mixin: HEAD of FeatureRenderDispatcher.renderAllFeatures. */
-    fun beginRenderAll() { inRenderAll = true }
-
-    /** Mixin: TAIL of FeatureRenderDispatcher.renderAllFeatures. */
-    fun endRenderAll() { inRenderAll = false }
-
-    /** Mixin: tail of FeatureRenderDispatcher.renderSolidFeatures — prepares the frame, draws cutout. */
+    /** Mixin: tail of FeatureRenderDispatcher.renderSolidFeatures — prepares this scope, draws cutout. */
     fun renderSolid() {
-        if (!active) { queue.clear(); return }
-        if (inRenderAll) return // wrapped call = hand/screen pass, not the world
+        if (!active) { queue.clear(); flushed = 0; return }
         try {
-            prepareIfNeeded()
-            drawGroup(prepared.filter { it.mode == DrawMode.CUTOUT })
+            scope = prepare(queue.subList(flushed, queue.size))
+            flushed = queue.size
+            drawGroup(scope.filter { it.mode == DrawMode.CUTOUT })
         } catch (t: Throwable) {
             disable("draw (solid) failed", t)
         }
@@ -155,27 +152,22 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
 
     /** Mixin: tail of FeatureRenderDispatcher.renderTranslucentFeatures — draws blended, far→near. */
     fun renderBlended() {
-        if (!active || !preparedThisFrame || inRenderAll) return
+        if (!active || scope.isEmpty()) return
         try {
-            drawGroup(prepared.filter { it.mode != DrawMode.CUTOUT }.sortedByDescending { it.distSq })
+            drawGroup(scope.filter { it.mode != DrawMode.CUTOUT }.sortedByDescending { it.distSq })
         } catch (t: Throwable) {
             disable("draw (blended) failed", t)
+        } finally {
+            scope = emptyList()
         }
     }
 
     /** Mixin: FeatureRenderDispatcher.endFrame — clear the queue and retire buffers/meshes. */
     fun endFrame() {
         queue.clear()
-        prepared = emptyList()
-        preparedThisFrame = false
-        inRenderAll = false
+        flushed = 0
+        scope = emptyList()
         retireFrame()
-    }
-
-    private fun prepareIfNeeded() {
-        if (preparedThisFrame) return
-        preparedThisFrame = true
-        prepared = prepare(queue)
     }
 
     private val IDENTITY = Matrix4f()
