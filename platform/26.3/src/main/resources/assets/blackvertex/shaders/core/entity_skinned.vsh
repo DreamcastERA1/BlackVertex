@@ -1,20 +1,21 @@
 #version 330
+#extension GL_ARB_separate_shader_objects : require
 
 // BlackVertex GPU skinning: bind-pose vertices + bone palette UBO, blended on the GPU.
 // Companion of the vanilla entity shader pair — the fragment side is a vanilla copy,
-// so lighting/fog/cutout behave exactly like entityCutout.
+// so lighting/fog/cutout behave exactly like entityCutout. Output locations match its inputs.
 
-#moj_import <minecraft:light.glsl>
-#moj_import <minecraft:fog.glsl>
-#moj_import <minecraft:dynamictransforms.glsl>
-#moj_import <minecraft:projection.glsl>
-#moj_import <minecraft:sample_lightmap.glsl>
+#include <minecraft:light.glsl>
+#include <minecraft:fog.glsl>
+#include <minecraft:dynamictransforms.glsl>
+#include <minecraft:projection.glsl>
+#include <minecraft:sample_lightmap.glsl>
 
-in vec3 Position;      // bind-pose, model space
-in vec2 UV0;
-in vec3 Normal;        // bind-pose, model space
-in uvec4 BoneIndices;
-in vec4 BoneWeights;   // normalized, sum == 1
+layout(location = 0) in vec3 Position;      // bind-pose, model space
+layout(location = 1) in vec2 UV0;
+layout(location = 2) in vec3 Normal;        // bind-pose, model space
+layout(location = 3) in uvec4 BoneIndices;
+layout(location = 4) in vec4 BoneWeights;   // normalized, sum == 1
 
 uniform sampler2D Sampler1; // overlay
 #ifndef EMISSIVE
@@ -27,14 +28,14 @@ layout(std140) uniform BonePalette {
     ivec4 LightAndOverlay; // xy = packed lightmap coords, zw = packed overlay coords
 };
 
-out float sphericalVertexDistance;
-out float cylindricalVertexDistance;
-out vec4 vertexColor;
+layout(location = 0) out float sphericalVertexDistance;
+layout(location = 1) out float cylindricalVertexDistance;
+layout(location = 2) out vec4 vertexColor;
 #ifndef EMISSIVE
-out vec4 lightMapColor;
+layout(location = 4) out vec4 lightMapColor;
 #endif
-out vec4 overlayColor;
-out vec2 texCoord0;
+layout(location = 5) out vec4 overlayColor;
+layout(location = 6) out vec2 texCoord0;
 
 void main() {
     mat4 skin = Bones[BoneIndices.x] * BoneWeights.x

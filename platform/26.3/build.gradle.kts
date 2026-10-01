@@ -1,4 +1,4 @@
-// :platform:26.2 — the Minecraft 26.2 integration: the feature layer, the CPU and GPU render paths,
+// :platform:26.3 — the Minecraft 26.3 integration: the feature layer, the CPU and GPU render paths,
 // texture registration and the client entrypoint. A sibling platform (26.1.2) will declare its own
 // numbers and its own GPU backend; the version-neutral half lives in :core.
 plugins {
@@ -10,14 +10,14 @@ plugins {
 
 fun prop(name: String): String = providers.gradleProperty(name).get()
 
-// Everything version-specific about 26.2, in one place.
-val minecraftVersion = prop("mc262_minecraft_version")
-val loaderVersion = prop("mc262_loader_version")
-val kotlinLoaderVersion = prop("mc262_kotlin_loader_version")
-val fabricVersion = prop("mc262_fabric_version")
+// Everything version-specific about 26.3, in one place.
+val minecraftVersion = prop("mc263_minecraft_version")
+val loaderVersion = prop("mc263_loader_version")
+val kotlinLoaderVersion = prop("mc263_kotlin_loader_version")
+val fabricVersion = prop("mc263_fabric_version")
 
 base {
-    archivesName = prop("mc262_archives_base_name")
+    archivesName = prop("mc263_archives_base_name")
 }
 
 // Platform code every MC platform shares: the feature layer, the CPU render path, textures and the
@@ -31,7 +31,7 @@ kotlin {
 }
 
 // Shared assets (demo models/textures + the placeholder used by BlackVertexTextures) compiled into
-// each platform's jar. The 26.2-only GPU shaders stay in this module's own resources.
+// each platform's jar. The 26.3-only GPU shaders stay in this module's own resources.
 sourceSets.named("main") {
     resources.srcDir("../shared/src/main/resources")
 }
@@ -48,7 +48,7 @@ loom {
 dependencies {
     implementation(project(":core"))
 
-    // 26.2 ships deobfuscated → no `mappings(...)` line, and Fabric artifacts come in via plain
+    // 26.3 ships deobfuscated → no `mappings(...)` line, and Fabric artifacts come in via plain
     // `implementation(...)` instead of `modImplementation(...)`.
     minecraft("com.mojang:minecraft:$minecraftVersion")
     implementation("net.fabricmc:fabric-loader:$loaderVersion")

@@ -25,7 +25,7 @@ fun prop(name: String): String = providers.gradleProperty(name).get()
 version = prop("mod_version")
 
 // Same rule as `blackvertex.jvm-module` — fold the path into the group so same-named platform leaves
-// stay distinct: :platform:26.2 -> org.blackaddons.platform:26.2
+// stay distinct: :platform:26.3 -> org.blackaddons.platform:26.3
 group = (listOf(prop("maven_group")) + project.path.removePrefix(":").split(":").dropLast(1))
     .joinToString(".")
 
@@ -54,7 +54,7 @@ tasks.withType<KotlinCompile>().configureEach {
 // classes, so the POM carries NO dependencies on purpose — the consumer is itself a Fabric mod that
 // already provides Minecraft/Fabric/FLK, and a `project(":core")` line in the POM would only fail to
 // resolve (:core is never published on its own). artifactId is the platform's archive name, e.g.
-// `blackvertex-26.2`, so JitPack coordinates read com.github.dreamcastera1.blackvertex:blackvertex-26.2:<tag>.
+// `blackvertex-26.3`, so JitPack coordinates read com.github.dreamcastera1.blackvertex:blackvertex-26.3:<tag>.
 configure<PublishingExtension> {
     publications {
         create<MavenPublication>("mod") {

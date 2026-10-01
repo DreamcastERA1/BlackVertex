@@ -127,9 +127,9 @@ internal class BlackVertexCosmeticLayer(
             FollowPart.NONE -> {}
         }
         poseStack.translate(a.offsetX, a.offsetY, a.offsetZ)
-        if (a.pitchDeg != 0f) poseStack.mulPose(Axis.XP.rotationDegrees(a.pitchDeg))
-        if (a.yawDeg != 0f) poseStack.mulPose(Axis.YP.rotationDegrees(a.yawDeg))
-        if (a.rollDeg != 0f) poseStack.mulPose(Axis.ZP.rotationDegrees(a.rollDeg))
+        if (a.pitchDeg != 0f) poseStack.last().rotate(Axis.XP.rotationDegrees(a.pitchDeg))
+        if (a.yawDeg != 0f) poseStack.last().rotate(Axis.YP.rotationDegrees(a.yawDeg))
+        if (a.rollDeg != 0f) poseStack.last().rotate(Axis.ZP.rotationDegrees(a.rollDeg))
         if (a.scale != 1f) poseStack.scale(a.scale, a.scale, a.scale)
     }
 

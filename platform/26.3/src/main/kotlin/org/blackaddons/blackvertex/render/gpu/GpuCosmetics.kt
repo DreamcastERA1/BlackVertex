@@ -1,12 +1,12 @@
 package org.blackaddons.blackvertex.render.gpu
 
-import com.mojang.blaze3d.IndexType
-import com.mojang.blaze3d.PrimitiveTopology
-import com.mojang.blaze3d.buffers.GpuBufferSlice
-import com.mojang.blaze3d.pipeline.*
-import com.mojang.blaze3d.platform.CompareOp
-import com.mojang.blaze3d.shaders.UniformType
-import com.mojang.blaze3d.systems.RenderPass
+import com.mojang.renderpearl.api.pipeline.IndexType
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice
+import com.mojang.renderpearl.api.pipeline.*
+import com.mojang.renderpearl.api.pipeline.CompareOp
+import com.mojang.renderpearl.api.pipeline.UniformType
+import com.mojang.renderpearl.api.commands.RenderPass
 import com.mojang.blaze3d.systems.RenderSystem
 import net.fabricmc.fabric.api.client.rendering.v1.FeatureRendererRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.SubmitRenderPhase
@@ -19,7 +19,7 @@ import net.minecraft.client.renderer.feature.FeatureRenderer
 import net.minecraft.client.renderer.feature.FeatureRendererType
 import net.minecraft.client.renderer.feature.phase.FeatureRenderPhase
 import net.minecraft.client.renderer.feature.submit.SubmitNode
-import net.minecraft.client.renderer.rendertype.OutputTarget
+import net.minecraft.client.renderer.oit.OitStage
 import net.minecraft.client.renderer.rendertype.PreparedRenderType
 import net.minecraft.client.renderer.rendertype.RenderSetup
 import net.minecraft.resources.Identifier
@@ -59,6 +59,9 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
         RenderPipelines.register(
             skinnedPipelineBuilder("entity_skinned")
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER2)
+                // 26.3 checks a pipeline's color targets against the pass it is drawn in; vanilla's
+                // entity_cutout declares the main target's single one the same way.
+                .withColorTargetState(ColorTargetState.DEFAULT)
                 .build()
         )
     }
@@ -157,17 +160,11 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
     }
 
     override fun bindTextures(pass: RenderPass, textures: Tex) {
-        for (t in textures) pass.bindTexture(t.name, t.textureView, t.sampler)
+        for (t in textures) pass.setUniform(t.name, t.textureView, t.sampler)
     }
 
-    override fun openPass(): RenderPass {
-        // Same target resolution as vanilla PreparedRenderType.drawFromBuffer.
-        val target = OutputTarget.MAIN_TARGET.renderTarget
-        val color = RenderSystem.outputColorTextureOverride ?: checkNotNull(target.colorTextureView)
-        val depth = if (target.useDepth) RenderSystem.outputDepthTextureOverride ?: target.depthTextureView else null
-        return RenderSystem.getDevice().createCommandEncoder()
-            .createRenderPass({ "blackvertex gpu cosmetics" }, color, Optional.empty(), depth, OptionalDouble.empty())
-    }
+    override fun setPipeline(pass: RenderPass, pipeline: RenderPipeline) =
+        pass.setPipeline(RenderSystem.getCompiledPipeline(pipeline))
 
     override fun drawMesh(pass: RenderPass, mesh: GpuMesh) {
         pass.setVertexBuffer(0, mesh.vertexBuffer.slice())
@@ -191,10 +188,20 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
             )
         }
 
-        override fun executeGroup(context: FeatureFrameContext, groupIndex: Int, submits: List<Submit>, strictlyOrdered: Boolean) {
+        override fun executeGroup(
+            context: FeatureFrameContext,
+            stage: OitStage?,
+            renderPass: RenderPass,
+            groupIndex: Int,
+            submits: List<Submit>,
+            strictlyOrdered: Boolean,
+        ) {
+            // An OIT stage (26.3's "Improved Transparency") runs with its own attachments and needs
+            // OIT shader variants this pipeline doesn't have; skip rather than fail the whole path.
+            if (stage != null) return
             val group = groups.getOrNull(groupIndex) ?: return
             try {
-                drawGroup(group)
+                drawInto(renderPass, group)
             } catch (t: Throwable) {
                 disable("draw execution failed", t)
             }

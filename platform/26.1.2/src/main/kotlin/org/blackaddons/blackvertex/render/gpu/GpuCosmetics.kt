@@ -111,6 +111,8 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
         for ((name, tas) in textures) pass.bindTexture(name, tas.textureView(), tas.sampler())
     }
 
+    override fun setPipeline(pass: RenderPass, pipeline: RenderPipeline) = pass.setPipeline(pipeline)
+
     override fun openPass(): RenderPass {
         val target = OutputTarget.MAIN_TARGET.renderTarget
         val color = RenderSystem.outputColorTextureOverride ?: checkNotNull(target.colorTextureView)

@@ -15,9 +15,9 @@ internal interface GpuMeshHandle
 
 /**
  * The version-specific GPU skinning path behind one seam, so the shared feature layer stays
- * version-neutral. Each platform (26.2, 26.1.2) supplies its own implementation and installs it in
+ * version-neutral. Each platform (26.3, 26.1.2) supplies its own implementation and installs it in
  * [BlackVertexGpu]. The blaze3d device is the same across versions; what differs — and what this
- * hides — is the frame injection: 26.2 rides Fabric's feature-renderer submit, 26.1.2 a mixin pass.
+ * hides — is the frame injection: 26.3 rides Fabric's feature-renderer submit, 26.1.2 a mixin pass.
  */
 @OptIn(InternalBlackVertexApi::class)
 internal interface GpuBackend {
@@ -33,7 +33,7 @@ internal interface GpuBackend {
 
     /**
      * Queue one skinned cosmetic draw for this frame. [mesh] must be one this backend returned.
-     * [collector] is the current frame's vanilla submission sink: the submit-based backend (26.2)
+     * [collector] is the current frame's vanilla submission sink: the submit-based backend (26.3)
      * routes its draw node through it; mixin-driven backends (26.1.2) enqueue internally and ignore it.
      */
     fun submit(

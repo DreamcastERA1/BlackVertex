@@ -1,6 +1,6 @@
 package org.blackaddons.blackvertex.backend.gpu
 
-import com.mojang.blaze3d.buffers.GpuBuffer
+import org.blackaddons.blackvertex.compat.GpuBuffer
 import com.mojang.blaze3d.systems.RenderSystem
 import org.blackaddons.blackvertex.api.model.Model
 import java.nio.ByteBuffer
@@ -11,7 +11,7 @@ import java.nio.ByteOrder
 // quad trick is a vanilla-pipeline constraint our own pipeline doesn't have.
 //
 // The upload/packing is version-neutral (shared). The vertex FORMAT is NOT here: it's built per
-// platform (26.2 via GpuFormat, 26.1.2 via VertexFormatElement) and lives beside each pipeline.
+// platform (26.3 via GpuFormat, 26.1.2 via VertexFormatElement) and lives beside each pipeline.
 internal class GpuMesh private constructor(
     val vertexBuffer: GpuBuffer,
     val indexBuffer: GpuBuffer,

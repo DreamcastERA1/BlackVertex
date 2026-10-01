@@ -2,10 +2,10 @@
 
 package org.blackaddons.blackvertex.render.gpu
 
-import com.mojang.blaze3d.buffers.GpuBuffer
-import com.mojang.blaze3d.buffers.GpuBufferSlice
-import com.mojang.blaze3d.pipeline.RenderPipeline
-import com.mojang.blaze3d.systems.RenderPass
+import org.blackaddons.blackvertex.compat.GpuBuffer
+import org.blackaddons.blackvertex.compat.GpuBufferSlice
+import org.blackaddons.blackvertex.compat.RenderPipeline
+import org.blackaddons.blackvertex.compat.RenderPass
 import com.mojang.blaze3d.systems.RenderSystem
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.rendertype.RenderSetup
@@ -214,26 +214,29 @@ internal abstract class SkinnedGpuBackend<T> : GpuBackend {
     /** Draws [draws] in the given order in one RenderPass (pipeline/transform re-bound only on change). */
     internal fun drawGroup(draws: List<PreparedDraw<T>>) {
         if (draws.isEmpty()) return
-        openPass().use { pass ->
-            var pipeline: RenderPipeline? = null
-            var boundDynamic: GpuBufferSlice? = null
-            for (draw in draws) {
-                val wanted = pipelineFor(draw.mode)
-                if (wanted !== pipeline) {
-                    pipeline = wanted
-                    pass.setPipeline(wanted)
-                    // Re-bind after a pipeline switch: bind-group layouts differ per mode.
-                    RenderSystem.bindDefaultUniforms(pass)
-                    boundDynamic = null
-                }
-                if (draw.dynamicTransforms !== boundDynamic) {
-                    boundDynamic = draw.dynamicTransforms
-                    pass.setUniform("DynamicTransforms", draw.dynamicTransforms)
-                }
-                pass.setUniform("BonePalette", draw.paletteSlice)
-                bindTextures(pass, draw.textures)
-                drawMesh(pass, draw.mesh)
+        openPass().use { pass -> drawInto(pass, draws) }
+    }
+
+    /** Draw [draws] into a pass someone else opened - 26.3 hands each feature renderer the frame's pass. */
+    internal fun drawInto(pass: RenderPass, draws: List<PreparedDraw<T>>) {
+        var pipeline: RenderPipeline? = null
+        var boundDynamic: GpuBufferSlice? = null
+        for (draw in draws) {
+            val wanted = pipelineFor(draw.mode)
+            if (wanted !== pipeline) {
+                pipeline = wanted
+                setPipeline(pass, wanted)
+                // Re-bind after a pipeline switch: bind-group layouts differ per mode.
+                RenderSystem.bindDefaultUniforms(pass)
+                boundDynamic = null
             }
+            if (draw.dynamicTransforms !== boundDynamic) {
+                boundDynamic = draw.dynamicTransforms
+                pass.setUniform("DynamicTransforms", draw.dynamicTransforms)
+            }
+            pass.setUniform("BonePalette", draw.paletteSlice)
+            bindTextures(pass, draw.textures)
+            drawMesh(pass, draw.mesh)
         }
     }
 
@@ -260,7 +263,7 @@ internal abstract class SkinnedGpuBackend<T> : GpuBackend {
     }
 
     // Cutout draws keep submission order; blended ones draw last, far -> near. Used where a backend
-    // draws everything in a single pass (26.2); the mixin path filters per phase instead.
+    // draws everything in a single pass (26.3); the mixin path filters per phase instead.
     protected fun orderForSinglePass(draws: List<PreparedDraw<T>>): List<PreparedDraw<T>> =
         draws.filter { it.mode == DrawMode.CUTOUT } +
             draws.filter { it.mode != DrawMode.CUTOUT }.sortedByDescending { it.distSq }
@@ -270,7 +273,7 @@ internal abstract class SkinnedGpuBackend<T> : GpuBackend {
     /** Force the three lazy pipelines to register (called before the pipeline-compile pass). */
     protected abstract fun touchPipelines()
 
-    /** Install the frame-injection hook (Fabric FeatureRenderer on 26.2; nothing on 26.1.2's mixin). */
+    /** Install the frame-injection hook (Fabric FeatureRenderer on 26.3; nothing on 26.1.2's mixin). */
     protected abstract fun installInjection()
 
     protected abstract fun pipelineFor(mode: DrawMode): RenderPipeline
@@ -278,13 +281,17 @@ internal abstract class SkinnedGpuBackend<T> : GpuBackend {
     /** DynamicTransforms slice = the global camera model-view + [color] ColorModulator (arg count differs). */
     protected abstract fun writeTransform(color: Vector4f): GpuBufferSlice
 
-    /** Resolve Sampler0 + lightmap/overlay for the frame (26.2 prepareTextures vs 26.1.2 getTextures). */
+    /** Resolve Sampler0 + lightmap/overlay for the frame (26.3 prepareTextures vs 26.1.2 getTextures). */
     protected abstract fun resolveTextures(setup: RenderSetup): T
 
     protected abstract fun bindTextures(pass: RenderPass, textures: T)
 
+    /** Bind [pipeline] on [pass]; 26.3 binds a compiled pipeline instead of the description. */
+    protected abstract fun setPipeline(pass: RenderPass, pipeline: RenderPipeline)
+
     /** Open the cosmetics RenderPass on the main target (Optional vs OptionalInt in createRenderPass). */
-    protected abstract fun openPass(): RenderPass
+    protected open fun openPass(): RenderPass =
+        throw UnsupportedOperationException("this platform draws into the pass Minecraft hands it")
 
     protected abstract fun drawMesh(pass: RenderPass, mesh: GpuMesh)
 

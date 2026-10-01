@@ -1,7 +1,7 @@
 package org.blackaddons.blackvertex.backend.gpu
 
-import com.mojang.blaze3d.GpuFormat
-import com.mojang.blaze3d.vertex.VertexFormat
+import com.mojang.renderpearl.api.GpuFormat
+import com.mojang.renderpearl.api.vertex.VertexFormat
 
 // 26.2 skinned vertex format: the WebGPU-style GpuFormat attribute API. Bone indices are a real
 // integer (uint) attribute here. The shared GpuMesh packs the matching bytes; this only declares them.

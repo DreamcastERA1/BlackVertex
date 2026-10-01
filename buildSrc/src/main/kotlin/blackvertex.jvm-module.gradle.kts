@@ -17,13 +17,13 @@ fun prop(name: String): String = providers.gradleProperty(name).get()
 version = prop("mod_version")
 
 // A project's identity to Gradle is `group:name:version`, and its name is the last segment of its
-// path. Folding the path into the group keeps same-named leaves (e.g. two `26.2`s) apart:
+// path. Folding the path into the group keeps same-named leaves (e.g. two `26.3`s) apart:
 //   :core             -> org.blackaddons:core
-//   :platform:26.2    -> org.blackaddons.platform:26.2
+//   :platform:26.3    -> org.blackaddons.platform:26.3
 group = (listOf(prop("maven_group")) + project.path.removePrefix(":").split(":").dropLast(1))
     .joinToString(".")
 
-// Minecraft 26.2 requires Java 25 and is the only toolchain, so a lower target would buy nothing.
+// Minecraft 26.3 requires Java 25 and is the only toolchain, so a lower target would buy nothing.
 val targetJavaVersion = 25
 
 java {
