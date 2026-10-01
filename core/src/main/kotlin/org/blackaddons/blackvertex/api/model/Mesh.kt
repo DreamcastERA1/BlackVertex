@@ -1,6 +1,8 @@
 package org.blackaddons.blackvertex.api.model
 
+import org.blackaddons.blackvertex.api.InternalBlackVertexApi
 import org.blackaddons.blackvertex.api.model.Vertex.Companion.MAX_INFLUENCES
+import org.blackaddons.blackvertex.backend.cpu.QuadPacking
 import org.joml.Vector3f
 
 /** One drawable submesh (a `o` object in the .bobj). Shares the model's skeleton. */
@@ -12,7 +14,11 @@ class Mesh(
     val indices: IntArray,
     /** Texture path as declared in the source file, if any. Resolved by the consumer. */
     val texture: String?,
-)
+) {
+    /** [indices] regrouped for a QUADS draw (see [QuadPacking]); built once, on first CPU draw. */
+    @OptIn(InternalBlackVertexApi::class)
+    val quadIndices: IntArray by lazy { QuadPacking.pack(indices) }
+}
 
 /**
  * A single vertex with up to [MAX_INFLUENCES] bone influences.

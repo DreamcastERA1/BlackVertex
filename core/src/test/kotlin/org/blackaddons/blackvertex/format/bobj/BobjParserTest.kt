@@ -58,13 +58,17 @@ class BobjParserTest {
         val m = load("tail")
         val clip = requireNotNull(m.animations["idle"])
         val palette = PosePalette(m.skeleton)
-        val skinner = CpuSkinner()
         val v = m.meshes.first().vertices.first { it.boneWeights[0] > 0f }
+        val out = FloatArray(6)
+        fun skinnedPosition(): Vector3f {
+            CpuSkinner.skin(v, palette.matrices, out, 0)
+            return Vector3f(out[0], out[1], out[2])
+        }
 
         palette.update(null, 0f)
-        val bind = skinner.position(v, palette.matrices, Vector3f())
+        val bind = skinnedPosition()
         palette.update(clip, clip.durationSeconds * 0.5f)
-        val moved = skinner.position(v, palette.matrices, Vector3f())
+        val moved = skinnedPosition()
 
         assertTrue(bind.isFinite && moved.isFinite, "skinned positions must be finite")
         assertTrue(bind.distance(moved) > 1e-5f, "animation should displace the vertex")

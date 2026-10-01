@@ -7,9 +7,7 @@ import net.minecraft.client.renderer.rendertype.RenderType
 import org.blackaddons.blackvertex.anim.PosePalette
 import org.blackaddons.blackvertex.api.InternalBlackVertexApi
 import org.blackaddons.blackvertex.api.model.Model
-import org.blackaddons.blackvertex.api.model.Vertex
 import org.blackaddons.blackvertex.backend.cpu.CpuSkinner
-import org.joml.Vector3f
 
 // CPU-path glue: skins on the CPU and emits standard entity-format vertices through
 // submitCustomGeometry, so vanilla lighting/overlay/outline apply for free.
@@ -40,36 +38,33 @@ internal object BlackVertexRenderer {
         overlay: Int,
         argb: Int,
     ) {
-        // Local scratch: submit callbacks may run off the render thread, so keep no shared state.
-        val skinner = CpuSkinner()
-        val p = Vector3f()
-        val n = Vector3f()
         val palettes = palette.matrices
-
-        fun vertex(v: Vertex) {
-            skinner.position(v, palettes, p)
-            skinner.normal(v, palettes, n)
-            vc.addVertex(pose, p.x, p.y, p.z)
-                .setColor(argb)
-                .setUv(v.u, v.v)
-                .setOverlay(overlay)
-                .setLight(light)
-                .setNormal(pose, n.x, n.y, n.z)
-        }
-
         for (mesh in model.meshes) {
             val verts = mesh.vertices
-            val idx = mesh.indices
-            // Entity pipelines draw QUADS, so each triangle is emitted as a degenerate quad
-            // (last vertex repeated: v0,v1,v2,v2). Feeding raw triangles mis-groups the stream.
-            var i = 0
-            while (i < idx.size) {
-                val a = verts[idx[i]]
-                val b = verts[idx[i + 1]]
-                val c = verts[idx[i + 2]]
-                vertex(a); vertex(b); vertex(c); vertex(c)
-                i += 3
+            // Skin each vertex once: a corner is shared by up to ~6 triangles, and emitting re-reads it.
+            val skinned = scratch(verts.size * 6)
+            for (i in verts.indices) CpuSkinner.skin(verts[i], palettes, skinned, i * 6)
+            // Entity pipelines draw QUADS; quadIndices pairs each fan-triangulated quad back up and
+            // pads a lone triangle as a degenerate quad (a,b,c,c).
+            for (index in mesh.quadIndices) {
+                val v = verts[index]
+                val o = index * 6
+                vc.addVertex(pose, skinned[o], skinned[o + 1], skinned[o + 2])
+                    .setColor(argb)
+                    .setUv(v.u, v.v)
+                    .setOverlay(overlay)
+                    .setLight(light)
+                    .setNormal(pose, skinned[o + 3], skinned[o + 4], skinned[o + 5])
             }
         }
+    }
+
+    // Per thread, because submit callbacks may run off the render thread; grown, never shrunk.
+    private val scratchHolder = ThreadLocal.withInitial { FloatArray(0) }
+
+    private fun scratch(size: Int): FloatArray {
+        val current = scratchHolder.get()
+        if (current.size >= size) return current
+        return FloatArray(size).also(scratchHolder::set)
     }
 }
