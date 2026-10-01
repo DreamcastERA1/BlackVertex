@@ -23,7 +23,7 @@
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/platform" />
             <option value="$PROJECT_DIR$/platform/26.1.2" />
-            <option value="$PROJECT_DIR$/platform/26.2" />
+            <option value="$PROJECT_DIR$/platform/26.3" />
           </set>
         </option>
         <option name="resolveExternalAnnotations" value="true" />
