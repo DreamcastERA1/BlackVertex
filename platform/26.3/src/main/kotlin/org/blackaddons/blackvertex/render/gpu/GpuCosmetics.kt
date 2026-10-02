@@ -59,8 +59,6 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
         RenderPipelines.register(
             skinnedPipelineBuilder("entity_skinned")
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER2)
-                // 26.3 checks a pipeline's color targets against the pass it is drawn in; vanilla's
-                // entity_cutout declares the main target's single one the same way.
                 .withColorTargetState(ColorTargetState.DEFAULT)
                 .build()
         )
@@ -196,8 +194,6 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
             submits: List<Submit>,
             strictlyOrdered: Boolean,
         ) {
-            // An OIT stage (26.3's "Improved Transparency") runs with its own attachments and needs
-            // OIT shader variants this pipeline doesn't have; skip rather than fail the whole path.
             if (stage != null) return
             val group = groups.getOrNull(groupIndex) ?: return
             try {

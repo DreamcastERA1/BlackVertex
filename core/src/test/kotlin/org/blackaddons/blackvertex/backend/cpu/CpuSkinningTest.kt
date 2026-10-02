@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test
 @OptIn(InternalBlackVertexApi::class)
 class CpuSkinningTest {
 
-    /** The triangles a QUADS draw makes of [quads] (a,b,c,d -> abc, cda), degenerate ones dropped. */
     private fun drawnTriangles(quads: IntArray): Set<List<Int>> = buildSet {
         for (q in quads.indices step 4) {
             val (a, b, c, d) = listOf(quads[q], quads[q + 1], quads[q + 2], quads[q + 3])
@@ -25,7 +24,6 @@ class CpuSkinningTest {
     private fun triangles(indices: IntArray): Set<List<Int>> =
         (indices.indices step 3).map { canonical(indices[it], indices[it + 1], indices[it + 2]) }.toSet()
 
-    /** Same triangle, same winding, whatever corner it starts at. */
     private fun canonical(a: Int, b: Int, c: Int): List<Int> =
         listOf(listOf(a, b, c), listOf(b, c, a), listOf(c, a, b)).minBy { it[0] }
 
@@ -45,9 +43,9 @@ class CpuSkinningTest {
 
     @Test
     fun `fan triangulated polygons and loose triangles keep every triangle`() {
-        assertDrawsSameTriangles(intArrayOf(0, 1, 2, 0, 2, 3, 0, 3, 4)) // pentagon fan: a quad and a leftover
-        assertDrawsSameTriangles(intArrayOf(0, 1, 2, 3, 4, 5, 6, 7, 8)) // nothing pairs
-        assertDrawsSameTriangles(intArrayOf(5, 6, 7, 7, 8, 5)) // pair given in another rotation
+        assertDrawsSameTriangles(intArrayOf(0, 1, 2, 0, 2, 3, 0, 3, 4))
+        assertDrawsSameTriangles(intArrayOf(0, 1, 2, 3, 4, 5, 6, 7, 8))
+        assertDrawsSameTriangles(intArrayOf(5, 6, 7, 7, 8, 5))
     }
 
     @Test

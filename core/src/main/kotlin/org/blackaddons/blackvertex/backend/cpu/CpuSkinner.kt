@@ -10,11 +10,6 @@ import kotlin.math.sqrt
 @InternalBlackVertexApi
 object CpuSkinner {
 
-    /**
-     * Writes v's skinned model-space position and normalized normal to [out] at [at], as
-     * `px py pz nx ny nz`. Both come from one pass over the influences, read straight off the
-     * matrix fields: this runs per vertex per frame, so it allocates nothing.
-     */
     fun skin(v: Vertex, palette: Array<Matrix4f>, out: FloatArray, at: Int) {
         val x = v.position.x; val y = v.position.y; val z = v.position.z
         val nx = v.normal.x; val ny = v.normal.y; val nz = v.normal.z
@@ -27,7 +22,6 @@ object CpuSkinner {
             px += w * (m.m00() * x + m.m10() * y + m.m20() * z + m.m30())
             py += w * (m.m01() * x + m.m11() * y + m.m21() * z + m.m31())
             pz += w * (m.m02() * x + m.m12() * y + m.m22() * z + m.m32())
-            // Rotation/scale only, no translation.
             qx += w * (m.m00() * nx + m.m10() * ny + m.m20() * nz)
             qy += w * (m.m01() * nx + m.m11() * ny + m.m21() * nz)
             qz += w * (m.m02() * nx + m.m12() * ny + m.m22() * nz)

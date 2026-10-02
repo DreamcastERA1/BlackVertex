@@ -15,7 +15,6 @@ class Mesh(
     /** Texture path as declared in the source file, if any. Resolved by the consumer. */
     val texture: String?,
 ) {
-    /** [indices] regrouped for a QUADS draw (see [QuadPacking]); built once, on first CPU draw. */
     @OptIn(InternalBlackVertexApi::class)
     val quadIndices: IntArray by lazy { QuadPacking.pack(indices) }
 }

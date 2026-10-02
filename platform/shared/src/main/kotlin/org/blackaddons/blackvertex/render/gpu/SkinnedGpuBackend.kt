@@ -217,7 +217,6 @@ internal abstract class SkinnedGpuBackend<T> : GpuBackend {
         openPass().use { pass -> drawInto(pass, draws) }
     }
 
-    /** Draw [draws] into a pass someone else opened - 26.3 hands each feature renderer the frame's pass. */
     internal fun drawInto(pass: RenderPass, draws: List<PreparedDraw<T>>) {
         var pipeline: RenderPipeline? = null
         var boundDynamic: GpuBufferSlice? = null
@@ -286,7 +285,6 @@ internal abstract class SkinnedGpuBackend<T> : GpuBackend {
 
     protected abstract fun bindTextures(pass: RenderPass, textures: T)
 
-    /** Bind [pipeline] on [pass]; 26.3 binds a compiled pipeline instead of the description. */
     protected abstract fun setPipeline(pass: RenderPass, pipeline: RenderPipeline)
 
     /** Open the cosmetics RenderPass on the main target (Optional vs OptionalInt in createRenderPass). */

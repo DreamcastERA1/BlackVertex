@@ -41,11 +41,8 @@ internal object BlackVertexRenderer {
         val palettes = palette.matrices
         for (mesh in model.meshes) {
             val verts = mesh.vertices
-            // Skin each vertex once: a corner is shared by up to ~6 triangles, and emitting re-reads it.
             val skinned = scratch(verts.size * 6)
             for (i in verts.indices) CpuSkinner.skin(verts[i], palettes, skinned, i * 6)
-            // Entity pipelines draw QUADS; quadIndices pairs each fan-triangulated quad back up and
-            // pads a lone triangle as a degenerate quad (a,b,c,c).
             for (index in mesh.quadIndices) {
                 val v = verts[index]
                 val o = index * 6
@@ -59,7 +56,6 @@ internal object BlackVertexRenderer {
         }
     }
 
-    // Per thread, because submit callbacks may run off the render thread; grown, never shrunk.
     private val scratchHolder = ThreadLocal.withInitial { FloatArray(0) }
 
     private fun scratch(size: Int): FloatArray {
