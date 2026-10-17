@@ -172,6 +172,9 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
         retireFrame()
     }
 
+    /** Mixin: FeatureRenderDispatcher.close — free every buffer and mesh at shutdown. */
+    fun close() = closeBuffers()
+
     private val IDENTITY = Matrix4f()
     private val ZERO = Vector3f()
 }

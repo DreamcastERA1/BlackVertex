@@ -253,12 +253,16 @@ internal abstract class SkinnedGpuBackend<T> : GpuBackend {
         }
     }
 
-    /** Close every live/retired palette buffer immediately (backend teardown). */
+    /** Close every live/retired palette buffer and mesh immediately (backend teardown). */
     internal fun closeBuffers() {
         for (b in liveBuffers) b.close()
         for ((_, b) in retired) b.close()
         liveBuffers.clear()
         retired.clear()
+        for (mesh in meshes.values) mesh?.close()
+        for ((_, mesh) in retiredMeshes) mesh.close()
+        meshes.clear()
+        retiredMeshes.clear()
     }
 
     // Cutout draws keep submission order; blended ones draw last, far -> near. Used where a backend

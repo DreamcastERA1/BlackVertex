@@ -31,4 +31,9 @@ public class FeatureRenderDispatcherMixin {
     private void blackvertex$endFrame(CallbackInfo ci) {
         GpuCosmetics.INSTANCE.endFrame();
     }
+
+    @Inject(method = "close", at = @At("TAIL"))
+    private void blackvertex$close(CallbackInfo ci) {
+        GpuCosmetics.INSTANCE.close();
+    }
 }
