@@ -6,7 +6,7 @@
 ###### And some comments and code too
 
 A Fabric **client** library that renders skeletal, animated meshes on players as cosmetics
-— tails, ears, wings, and the like. Kotlin, Minecraft 26.1.2 and 26.3.
+— tails, ears, wings, and the like. Kotlin, Minecraft 26.1.2, 26.2 and 26.3.
 
 Vanilla entity rendering only speaks cuboids. BlackVertex renders arbitrary triangle meshes
 with bone skinning and keyframe animation, and skins them **on the GPU** — static vertex
@@ -25,10 +25,11 @@ Each Minecraft version is a separate, self-contained artifact — the version-ne
 | Minecraft | Artifact             |
 |-----------|----------------------|
 | 26.3      | `blackvertex-26.3`   |
+| 26.2      | `blackvertex-26.2`   |
 | 26.1.2    | `blackvertex-26.1.2` |
 
 Both ship the GPU skinning path. They differ only in how the draw is injected into the frame
-(26.3 uses Fabric's feature-renderer system; 26.1.2 a small mixin), which is invisible to you.
+(26.3 and 26.2 use Fabric's feature-renderer system; 26.1.2 a small mixin), which is invisible to you.
 
 ## Installation
 

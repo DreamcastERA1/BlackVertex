@@ -15,4 +15,5 @@ rootProject.name = "blackvertex"
 // `core` means no Minecraft on the classpath, a version number means Loom.
 include("core")
 include("platform:26.3")
+include("platform:26.2")
 include("platform:26.1.2")
