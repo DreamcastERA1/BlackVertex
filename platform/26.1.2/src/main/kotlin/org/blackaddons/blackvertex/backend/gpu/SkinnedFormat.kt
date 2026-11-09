@@ -3,13 +3,14 @@ package org.blackaddons.blackvertex.backend.gpu
 import com.mojang.blaze3d.vertex.VertexFormat
 import com.mojang.blaze3d.vertex.VertexFormatElement
 
-// 26.1.2 skinned vertex format: built from VertexFormatElement (no GpuFormat on this version).
-// VertexFormat resolves each element's byte offset by id through the GLOBAL registry (byId(id) matched
-// against the format's elements by RECORD value-equality — an id whose registered element doesn't
-// value-match ours yields offset -1 == GL_INVALID_VALUE). So custom elements MUST be registered at
-// ids currently free in the global registry. Position/UV0 reuse vanilla elements (they value-match: FLOAT×3 / FLOAT×2);
-// Normal is a custom FLOAT×3 (vanilla NORMAL is BYTE×3); bone indices/weights are normalized bytes
-// recovered in the vsh. The shared GpuMesh packs the matching bytes.
+// 26.1.2 skinned vertex format, built from VertexFormatElement (this version has no GpuFormat).
+//
+// VertexFormat finds each element's byte offset by id through the GLOBAL registry: byId(id) is matched against the
+// format's elements by RECORD value equality, and an id whose registered element does not equal ours gives offset -1,
+// which is GL_INVALID_VALUE. So custom elements MUST be registered at ids that are currently free in the global
+// registry. Position and UV0 reuse vanilla elements, because they are equal (FLOAT x3 and FLOAT x2). Normal is a custom
+// FLOAT x3 (vanilla NORMAL is BYTE x3), and the bone indices and weights are normalized bytes that the vsh decodes. The
+// shared GpuMesh packs the matching bytes.
 internal object SkinnedFormat {
     private val NORMAL = registerFree(VertexFormatElement.Type.FLOAT, false, 3)
     private val BONE_INDICES = registerFree(VertexFormatElement.Type.UBYTE, true, 4)

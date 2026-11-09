@@ -1,6 +1,13 @@
 package org.blackaddons.blackvertex.format.bobj
 
-import org.blackaddons.blackvertex.api.model.*
+import org.blackaddons.blackvertex.api.model.Animation
+import org.blackaddons.blackvertex.api.model.BoneChannel
+import org.blackaddons.blackvertex.api.model.GlobalBone
+import org.blackaddons.blackvertex.api.model.Keyframe
+import org.blackaddons.blackvertex.api.model.Mesh
+import org.blackaddons.blackvertex.api.model.Model
+import org.blackaddons.blackvertex.api.model.Skeleton
+import org.blackaddons.blackvertex.api.model.Vertex
 import org.joml.Matrix4f
 import org.joml.Quaternionf
 import org.joml.Vector2f
@@ -8,31 +15,30 @@ import org.joml.Vector3f
 import kotlin.math.roundToInt
 
 /**
- * Parser for the Blockbuster OBJ (`.bobj`) format — an OBJ variant exported from
- * Blender by the McHorse Blockbuster add-on, extended with armature and animation.
+ * Parser for the Blockbuster OBJ (`.bobj`) format: an OBJ variant that the McHorse Blockbuster add-on exports from
+ * Blender, extended with an armature and animations.
  *
  * Grammar (whitespace-separated tokens, 1-based indices as in OBJ):
  * ```
  *  v  x y z                          vertex position
  *  vw <bone> <weight>                weight for the *preceding* v, by bone name
- *  vt u v                            texture coordinate (OBJ bottom-up v; flipped to top-down on parse)
+ *  vt u v                            texture coordinate (OBJ bottom-up v, flipped to top-down on parse)
  *  vn x y z                          normal
- *  f  v/vt/vn v/vt/vn ...            face (n-gons fan-triangulated)
+ *  f  v/vt/vn v/vt/vn ...            face (n-gons are fan-triangulated)
  *  o  <name>                         start a submesh
- *  arm_bone <name> [parent] hx hy hz  m00..m33   bone: head + 4x4 rest matrix (row-major)
+ *  arm_bone <name> [parent] hx hy hz  m00..m33   bone: head and 4x4 rest matrix (row-major)
  *  an <name>                         start an animation clip
- *  ao <bone>                         select bone for following channels
+ *  ao <bone>                         select the bone for the following channels
  *  ag <prop> <component>             f-curve group: prop in {rotation,scale,location}
- *  kf <frame> <value> <interp> <hlx> <hly> <hrx> <hry>   keyframe (handles: left/right, absolute)
+ *  kf <frame> <value> <interp> <hlx> <hly> <hrx> <hry>   keyframe (left and right handles, absolute)
  * ```
  *
- * Interpolation: LINEAR and BEZIER (cubic, Blender F-curve handles; CONSTANT falls back to
- * linear). Curves containing a bezier segment are baked densely (one key per frame) so the
- * runtime sampler stays a plain lerp.
+ * Interpolation is LINEAR or BEZIER (cubic, with Blender F-curve handles). CONSTANT falls back to linear.
+ * Curves with a bezier segment are baked densely (one key per frame), so the runtime sampler stays a plain lerp.
  *
- * Known simplifications (revisit if a model misbehaves):
- *  - Handle order is assumed `handle_left.xy handle_right.xy` (zeroed in known exports).
- *  - Euler rotation is baked XYZ (Blender default); bone names with spaces are unsupported.
+ * Known simplifications (revisit if a model looks wrong):
+ *  - The handle order is assumed to be `handle_left.xy handle_right.xy` (zeroed in known exports).
+ *  - Euler rotation is baked as XYZ (Blender's default). Bone names with spaces are not supported.
  */
 internal object BobjParser {
 
@@ -71,9 +77,9 @@ internal object BobjParser {
                     curVertex = positions.lastIndex
                 }
                 "vw" -> if (curVertex >= 0) weights[curVertex].add(t[1] to t[2].toFloat())
-                // OBJ's v origin is the image's BOTTOM-left; Model (like MC) puts v=0 at the
-                // TOP. Flip here so the renderer can hand UVs to the pipeline untouched.
-                // Without this, cutout alpha punches mirrored holes into the mesh.
+                // OBJ's v origin is the BOTTOM left of the image, while Model (like Minecraft) puts v = 0 at the TOP.
+                // Flip it here so the renderer can pass UVs to the pipeline unchanged. Without this, cutout alpha
+                // punches mirrored holes into the mesh.
                 "vt" -> uvs.add(Vector2f(t[1].toFloat(), 1f - t[2].toFloat()))
                 "vn" -> normals.add(vec3(t))
                 "f" -> parseFace(t, curMesh ?: RawMesh("mesh").also { meshes.add(it); curMesh = it })
@@ -97,7 +103,7 @@ internal object BobjParser {
                         )
                     }
                 }
-                // arm_name, arm_action, o_arm, usemtl, mtllib, s, ... : not needed for rendering
+                // arm_name, arm_action, o_arm, usemtl, mtllib, s and so on are not needed for rendering.
             }
         }
 
@@ -108,7 +114,7 @@ internal object BobjParser {
     }
 
     private class RawMesh(val name: String) {
-        // One IntArray{posIdx, uvIdx, normIdx} (0-based, -1 if absent) per corner, triangulated.
+        // One IntArray {posIdx, uvIdx, normIdx} (0-based, -1 if missing) per corner, after triangulation.
         val corners = ArrayList<IntArray>()
 
         fun build(
@@ -124,7 +130,7 @@ internal object BobjParser {
 
             for (i in corners.indices) {
                 val c = corners[i]
-                // +1 so a missing (-1) uv/normal packs as 0 instead of corrupting the key.
+                // +1 so a missing (-1) UV or normal packs as 0 instead of corrupting the key.
                 val key = ((c[0] + 1).toLong() shl 42) or ((c[1] + 1).toLong() shl 21) or (c[2] + 1).toLong()
                 indices[i] = vertexIndex.getOrPut(key) {
                     vertices.add(makeVertex(c, positions, normals, uvs, weights, skeleton))
@@ -147,7 +153,7 @@ internal object BobjParser {
         val norm = if (c[2] >= 0) Vector3f(normals[c[2]]) else Vector3f(0f, 1f, 0f)
         val uv = if (c[1] >= 0) uvs[c[1]] else ZERO_UV
 
-        // Resolve up to MAX_INFLUENCES weighted bones, normalized.
+        // Resolves up to MAX_INFLUENCES weighted bones and normalizes them.
         val raw = weights.getOrElse(c[0]) { emptyList() }
             .mapNotNull { (name, w) ->
                 val idx = skeleton.indexOf(name)
@@ -168,7 +174,7 @@ internal object BobjParser {
     }
 
     private fun parseFace(t: List<String>, mesh: RawMesh) {
-        // Corners at t[1..]. Fan-triangulate: (0, i, i+1).
+        // The corners are at t[1..]. Fan triangulation: (0, i, i + 1).
         val n = t.size - 1
         val parsed = Array(n) { i -> corner(t[i + 1]) }
         for (i in 1 until n - 1) {
@@ -178,7 +184,7 @@ internal object BobjParser {
         }
     }
 
-    // "v/vt/vn" or "v//vn" or "v" -> [posIdx, uvIdx, normIdx] 0-based, -1 where missing.
+    // "v/vt/vn", "v//vn" or "v" -> [posIdx, uvIdx, normIdx], 0-based, with -1 where missing.
     private fun corner(s: String): IntArray {
         val parts = s.split('/')
         fun idx(i: Int): Int = parts.getOrNull(i)?.toIntOrNull()?.let { it - 1 } ?: -1
@@ -190,7 +196,7 @@ internal object BobjParser {
     private fun parseBone(t: List<String>): RawBone? {
         if (t.size < 3) return null
         val name = t[1]
-        // t[2] is a parent name if it isn't numeric.
+        // t[2] is a parent name when it is not a number.
         val hasParent = t[2].toFloatOrNull() == null
         val parent = if (hasParent) t[2] else null
         val matStart = (if (hasParent) 3 else 2) + 3 // skip parent + 3 head floats
@@ -199,8 +205,8 @@ internal object BobjParser {
     }
 
     private fun buildSkeleton(rawBones: Map<String, RawBone>): Skeleton {
-        // Unskinned model (plain OBJ etc.): synthesize an identity root so the fallback weight in
-        // makeVertex has a real bone to point at — see ModelLoader's contract.
+        // An unskinned model (plain OBJ and the like): create an identity root, so the fallback weight in makeVertex
+        // has a real bone to point at. See ModelLoader's contract.
         if (rawBones.isEmpty()) return Skeleton.singleRoot()
         return Skeleton.fromGlobalBind(rawBones.values.map { GlobalBone(it.name, it.parent, it.global) })
     }
@@ -214,7 +220,7 @@ internal object BobjParser {
     )
 
     private class RawAnim(val name: String) {
-        // bone -> prop -> component -> list of keys (sorted before sampling)
+        // bone -> prop -> component -> list of keys (sorted before sampling).
         private val data = LinkedHashMap<String, LinkedHashMap<String, HashMap<Int, MutableList<RawKey>>>>()
 
         fun curve(bone: String, prop: String, comp: Int): MutableList<RawKey> =
@@ -274,7 +280,7 @@ internal object BobjParser {
         private fun prepare(comps: Map<Int, MutableList<RawKey>>): Array<List<RawKey>> =
             Array(3) { comps[it]?.sortedBy { k -> k.frame } ?: emptyList() }
 
-        // Union of key frames, or every frame when a bezier segment is present (dense bake).
+        // The union of the key frames, or every frame when a bezier segment is present (dense bake).
         private fun frames(comps: Map<Int, MutableList<RawKey>>): List<Int> {
             val keys = comps.values.flatten()
             if (keys.isEmpty()) return emptyList()
@@ -284,7 +290,7 @@ internal object BobjParser {
             return keys.map { it.frame }.toSortedSet().toList()
         }
 
-        // Segments use the LEFT key's interpolation mode, matching Blender.
+        // A segment uses the interpolation mode of its LEFT key, as in Blender.
         private fun sample(curve: List<RawKey>, frame: Int, default: Float): Float {
             if (curve.isEmpty()) return default
             if (frame <= curve.first().frame) return curve.first().value
@@ -300,11 +306,11 @@ internal object BobjParser {
             return sampleBezier(a, b, frame.toFloat())
         }
 
-        // Cubic bezier in (frame, value) space: P0=a, P1=a's right handle, P2=b's left, P3=b.
+        // A cubic bezier in (frame, value) space: P0 = a, P1 = a's right handle, P2 = b's left handle, P3 = b.
         private fun sampleBezier(a: RawKey, b: RawKey, frame: Float): Float {
             val x0 = a.frame.toFloat(); val x3 = b.frame.toFloat()
-            // Hand-edited handles outside [x0, x3] would make x(t) non-monotonic and the
-            // bisection meaningless; clamp like Blender does.
+            // Hand-edited handles outside [x0, x3] would make x(t) non-monotonic and the bisection meaningless, so
+            // clamp them like Blender does.
             val x1 = a.hrx.coerceIn(x0, x3); val x2 = b.hlx.coerceIn(x0, x3)
             val y0 = a.value; val y1 = a.hry; val y2 = b.hly; val y3 = b.value
 

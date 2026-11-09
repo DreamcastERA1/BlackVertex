@@ -5,14 +5,14 @@ import org.blackaddons.blackvertex.api.model.Vertex.Companion.MAX_INFLUENCES
 import org.blackaddons.blackvertex.backend.cpu.QuadPacking
 import org.joml.Vector3f
 
-/** One drawable submesh (a `o` object in the .bobj). Shares the model's skeleton. */
+/** One drawable submesh (an `o` object in the .bobj). It shares the model's skeleton. */
 class Mesh(
     val name: String,
-    /** Flat, de-duplicated vertex list. [indices] references into this. */
+    /** A flat list of unique vertices. [indices] point into it. */
     val vertices: List<Vertex>,
-    /** Triangle indices, 3 per face (quads are triangulated at parse time). */
+    /** Triangle indices, 3 per face (quads are split into triangles when parsing). */
     val indices: IntArray,
-    /** Texture path as declared in the source file, if any. Resolved by the consumer. */
+    /** The texture path as declared in the source file, if any. The consumer resolves it. */
     val texture: String?,
 ) {
     @OptIn(InternalBlackVertexApi::class)
@@ -20,11 +20,10 @@ class Mesh(
 }
 
 /**
- * A single vertex with up to [MAX_INFLUENCES] bone influences.
- * [u]/[v] use Minecraft's convention: v=0 is the TOP of the texture (loaders convert
- * from bottom-up source formats like OBJ at parse time).
- * [boneWeights] are normalized to sum to 1; unused slots have index 0 / weight 0.
- * An unskinned vertex has one influence on a synthetic root bone with weight 1.
+ * A single vertex with up to [MAX_INFLUENCES] bone influences. [u] and [v] use Minecraft's convention, where v = 0 is
+ * the TOP of the texture (loaders convert bottom-up formats like OBJ when parsing). [boneWeights] are normalized to sum
+ * to 1, and unused slots have index 0 and weight 0. An unskinned vertex has one influence, on a synthetic root bone,
+ * with weight 1.
  */
 class Vertex(
     val position: Vector3f,

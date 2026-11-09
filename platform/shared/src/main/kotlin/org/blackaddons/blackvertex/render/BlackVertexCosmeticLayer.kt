@@ -18,16 +18,16 @@ import org.blackaddons.blackvertex.render.gpu.BlackVertexGpu
 import org.blackaddons.blackvertex.render.gpu.DrawMode
 import java.util.UUID
 
-// Feature layer that draws every registered PlayerCosmetic on a player, through the GPU
-// path when available and the CPU skinner otherwise.
+// The feature layer that draws every registered PlayerCosmetic on a player, through the GPU path when it is available
+// and the CPU skinner otherwise.
 @OptIn(InternalBlackVertexApi::class)
 internal class BlackVertexCosmeticLayer(
     renderer: RenderLayerParent<AvatarRenderState, PlayerModel>,
 ) : RenderLayer<AvatarRenderState, PlayerModel>(renderer) {
 
-    // Reused palettes, one per (cosmetic, entity). Written at submit, read by the same
-    // frame's draw; the next submit for the same key happens after that draw completed,
-    // so overwriting in place is safe and steady-state frames allocate nothing.
+    // Reused palettes, one per (cosmetic, entity). A palette is written at submit and read by the same frame's draw,
+    // and the next submit for the same key only happens after that draw is done, so overwriting it in place is safe and
+    // steady frames allocate nothing.
     private val palettes = HashMap<PaletteKey, PosePalette>()
 
     private data class PaletteKey(val cosmetic: PlayerCosmetic, val entityId: Int)
@@ -48,18 +48,19 @@ internal class BlackVertexCosmeticLayer(
         val maxDistance = PlayerCosmetics.renderDistanceBlocks
         if (state.distanceToCameraSq > maxDistance.toDouble() * maxDistance) return
 
-        // Entries for departed players linger; rebuilding ~200 palettes for one frame is
-        // cheaper than tracking who left.
+        // Entries for players who left stay around. Rebuilding about 200 palettes for one frame is cheaper than
+        // tracking who left.
         if (palettes.size > MAX_CACHED_PALETTES) palettes.clear()
 
         val overlay = LivingEntityRenderer.getOverlayCoords(state, 0.0f)
-        // Resolve the rendered player's UUID once: it targets per-player cosmetics and seeds the phase.
+        // Resolve the rendered player's UUID once: it targets per-player cosmetics and seeds the animation phase.
         val selfUuid = PlayerCosmetics.uuidResolver(state)
-        // Double until the final wrap: Float alone loses frame precision after hours of uptime.
+        // Double until the final wrap, because a Float alone loses frame precision after hours of uptime.
         val elapsed = (System.nanoTime() - START_NANOS) / 1_000_000_000.0 + phaseOffset(selfUuid, state.id)
 
         for (cosmetic in cosmetics) {
-            // Per-player targeting: uuid pins to one player, visibleFor is an extra gate; null = draw on all.
+            // Per-player targeting: uuid pins the cosmetic to one player, and visibleFor is an extra check. Null means
+            // draw on everyone.
             if (cosmetic.uuid != null && cosmetic.uuid != selfUuid) continue
             if (cosmetic.visibleFor?.invoke(state) == false) continue
             val palette = palettes.getOrPut(PaletteKey(cosmetic, state.id)) { PosePalette(cosmetic.model.skeleton) }
@@ -68,7 +69,7 @@ internal class BlackVertexCosmeticLayer(
 
             val texture = cosmetic.texture ?: BlackVertexTextures.PLACEHOLDER
             val color = cosmetic.color
-            // A sub-opaque modulator alpha makes the whole cosmetic a translucent ghost.
+            // A modulator alpha below opaque turns the whole cosmetic into a translucent ghost.
             val translucent = cosmetic.translucent || (color ushr 24) != 0xFF
 
             poseStack.pushPose()
@@ -98,19 +99,19 @@ internal class BlackVertexCosmeticLayer(
                     if (translucent) RenderTypes.entityTranslucent(texture)
                     else RenderTypes.entityCutout(texture)
                 )
-                // Same vanilla type the GPU emissive pipeline mirrors: blend + fullbright.
+                // The same vanilla type that the GPU emissive pipeline copies: blending and fullbright.
                 cosmetic.emissive?.let { cpuSubmit(RenderTypes.entityTranslucentEmissive(it)) }
             }
             poseStack.popPose()
         }
     }
 
-    // Wraps into the clip in Double space, narrowing only the small remainder to Float.
+    // Wraps the time into the clip using Doubles, and narrows only the small remainder to a Float.
     private fun clipTime(time: Double, duration: Float): Float =
         if (duration > 0f) (time % duration).toFloat() else 0f
 
-    // Deterministic per-player phase, seeded by the entity UUID (stable across sessions);
-    // entity id is the fallback when the entity is already gone from the level.
+    // A deterministic per-player phase, seeded by the entity UUID (stable across sessions). The entity id is the
+    // fallback when the entity is already gone from the level.
     private fun phaseOffset(uuid: UUID?, entityId: Int): Float {
         val h = uuid?.hashCode() ?: entityId
         return (h and 0xFFFF) * 0.001f // 0..65.5s, far past any clip length
@@ -134,10 +135,10 @@ internal class BlackVertexCosmeticLayer(
     }
 
     private companion object {
-        // Shared clock so every layer instance (wide/slim renderers) agrees on animation time.
+        // A shared clock, so every layer instance (wide and slim renderers) agrees on the animation time.
         val START_NANOS: Long = System.nanoTime()
 
-        // ~2.5x a 100-player lobby with two cosmetics each.
+        // About 2.5 times a 100-player lobby with two cosmetics each.
         const val MAX_CACHED_PALETTES = 512
     }
 }

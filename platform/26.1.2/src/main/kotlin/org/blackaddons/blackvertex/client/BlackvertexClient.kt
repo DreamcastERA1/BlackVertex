@@ -9,8 +9,8 @@ class BlackvertexClient : ClientModInitializer {
 
     override fun onInitializeClient() {
         PlayerCosmetics.init()
-        // Install the 26.1.2 GPU backend behind the shared seam; FeatureRenderDispatcherMixin drives
-        // its draws. GPU default, CPU forced via -Dblackvertex.backend=cpu.
+        // Installs the 26.1.2 GPU backend behind the shared interface; FeatureRenderDispatcherMixin drives its draws.
+        // The GPU path is the default; -Dblackvertex.backend=cpu forces the CPU path.
         BlackVertexGpu.backend = GpuCosmetics
         GpuCosmetics.init()
 

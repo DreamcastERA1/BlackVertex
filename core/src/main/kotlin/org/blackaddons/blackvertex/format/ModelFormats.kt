@@ -7,10 +7,10 @@ import org.blackaddons.blackvertex.format.bobj.BobjLoader
 import org.blackaddons.blackvertex.format.geo.GeoJsonLoader
 
 /**
- * Registry that dispatches a source file to the right [ModelLoader] by extension.
+ * A registry that hands a source file to the right [ModelLoader] by extension.
  *
- * Built-in formats are registered on first use; add more with [register] (e.g. an
- * `.obj` loader, or a cuboid-model generator) — no rendering code changes.
+ * Built-in formats are registered on first use. Add more with [register] (an `.obj` loader or a cuboid model generator,
+ * for example) without changing any rendering code.
  */
 object ModelFormats {
 
@@ -26,9 +26,8 @@ object ModelFormats {
     }
 
     /**
-     * Load [text] using the loader claiming [fileName]'s extension.
-     * Throws [IllegalArgumentException] on unknown extensions or malformed input —
-     * wrap when loading untrusted/downloaded assets.
+     * Loads [text] with the loader that handles [fileName]'s extension. Throws [IllegalArgumentException] on an unknown
+     * extension or malformed input, so wrap it when loading untrusted or downloaded assets.
      */
     fun load(fileName: String, text: String): Model {
         val ext = fileName.substringAfterLast('.', "")

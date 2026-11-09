@@ -1,13 +1,17 @@
 package org.blackaddons.blackvertex.render.gpu
 
+import com.mojang.blaze3d.systems.RenderSystem
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice
+import com.mojang.renderpearl.api.commands.RenderPass
+import com.mojang.renderpearl.api.pipeline.BindGroupLayout
+import com.mojang.renderpearl.api.pipeline.BlendFunction
+import com.mojang.renderpearl.api.pipeline.ColorTargetState
+import com.mojang.renderpearl.api.pipeline.CompareOp
+import com.mojang.renderpearl.api.pipeline.DepthStencilState
 import com.mojang.renderpearl.api.pipeline.IndexType
 import com.mojang.renderpearl.api.pipeline.PrimitiveTopology
-import com.mojang.renderpearl.api.buffers.GpuBufferSlice
-import com.mojang.renderpearl.api.pipeline.*
-import com.mojang.renderpearl.api.pipeline.CompareOp
+import com.mojang.renderpearl.api.pipeline.RenderPipeline
 import com.mojang.renderpearl.api.pipeline.UniformType
-import com.mojang.renderpearl.api.commands.RenderPass
-import com.mojang.blaze3d.systems.RenderSystem
 import net.fabricmc.fabric.api.client.rendering.v1.FeatureRendererRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.SubmitRenderPhase
 import net.minecraft.client.Minecraft
@@ -30,7 +34,6 @@ import org.blackaddons.blackvertex.backend.gpu.SkinnedFormat
 import org.blackaddons.blackvertex.render.gpu.GpuCosmetics.PIPELINE
 import org.joml.Matrix4f
 import org.joml.Vector4f
-import java.util.*
 
 private typealias Tex = List<PreparedRenderType.Texture>
 
@@ -54,7 +57,7 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
             .withDepthStencilState(DepthStencilState.DEFAULT)
             .withCull(false)
 
-    /** Skinning pipeline: entity-style state, our vertex format, TRIANGLES, palette UBO. */
+    /** The skinning pipeline: entity-style state, our vertex format, TRIANGLES and the palette UBO. */
     val PIPELINE: RenderPipeline by lazy {
         RenderPipelines.register(
             skinnedPipelineBuilder("entity_skinned")
@@ -64,7 +67,7 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
         )
     }
 
-    /** Like [PIPELINE] with vanilla's TRANSLUCENT blend (mirrors entity_translucent). */
+    /** Like [PIPELINE], but with vanilla's TRANSLUCENT blend, as in entity_translucent. */
     val PIPELINE_TRANSLUCENT: RenderPipeline by lazy {
         RenderPipelines.register(
             skinnedPipelineBuilder("entity_skinned_translucent")
@@ -74,7 +77,7 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
         )
     }
 
-    /** Fullbright glow layer (mirrors entity_translucent_emissive: blend, no lightmap, no depth write). */
+    /** The fullbright glow layer, as in entity_translucent_emissive: blending, no lightmap and no depth write. */
     val PIPELINE_EMISSIVE: RenderPipeline by lazy {
         RenderPipelines.register(
             skinnedPipelineBuilder("entity_skinned_emissive")
@@ -102,15 +105,15 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
 
     val TYPE: FeatureRendererType<Submit> = FeatureRendererType.create("BlackVertexGpu")
 
-    // Fabric hands back the built-in phases as raw FeatureRenderPhase<*>; casting to our node type is
-    // safe because a phase is only a routing key and the sole thing we ever submit into it is a Submit.
+    // Fabric returns the built-in phases as raw FeatureRenderPhase<*>. Casting to our node type is safe, because a
+    // phase is only a routing key and the only thing we ever submit into it is a Submit.
     @Suppress("UNCHECKED_CAST")
     private val PHASE_SOLID = SubmitRenderPhase<Submit> { collection ->
         collection.solid as FeatureRenderPhase<Submit>
     }
 
-    // Blended draws must run in the translucent stage or they composite wrongly behind water/glass
-    // (the CPU path gets this for free from vanilla's render type sorting).
+    // Blended draws must run in the translucent stage, or they composite wrongly behind water and glass. The CPU path
+    // gets this for free from vanilla's render type sorting.
     @Suppress("UNCHECKED_CAST")
     private val PHASE_TRANSLUCENT = SubmitRenderPhase<Submit> { collection ->
         collection.translucentCustomGeometry as FeatureRenderPhase<Submit>
@@ -172,7 +175,7 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
 
     private class Renderer : FeatureRenderer<Submit> {
 
-        // One ordered draw list per prepared group; a failed prepare adds an empty one to keep indices.
+        // One ordered draw list per prepared group. A failed prepare adds an empty list to keep the indices.
         private val groups = ArrayList<List<PreparedDraw<Tex>>>()
 
         override fun prepareGroup(context: FeatureFrameContext, submits: List<Submit>, strictlyOrdered: Boolean) {

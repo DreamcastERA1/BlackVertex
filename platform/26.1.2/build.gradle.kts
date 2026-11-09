@@ -33,7 +33,7 @@ sourceSets.named("main") {
 // for the dev client — it reaches the forked game JVM, which a `-D` on the gradle command line would not.
 loom {
     runConfigs.named("client") {
-        property("blackvertex.demo", "true")
+        systemProperties.put("blackvertex.demo", "true")
     }
 }
 

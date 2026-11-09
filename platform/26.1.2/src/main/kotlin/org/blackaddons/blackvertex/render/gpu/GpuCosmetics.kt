@@ -22,7 +22,8 @@ import org.blackaddons.blackvertex.backend.gpu.SkinnedFormat
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.joml.Vector4f
-import java.util.*
+import java.util.OptionalDouble
+import java.util.OptionalInt
 
 private typealias Tex = Map<String, RenderSetup.TextureAndSampler>
 
@@ -61,9 +62,9 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
             skinnedPipelineBuilder("entity_skinned_emissive")
                 .withShaderDefine("EMISSIVE")
                 .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
-                // Mirrors vanilla ENTITY_TRANSLUCENT_EMISSIVE. 26.1.2 uses standard-Z depth, so the
-                // compare is LESS_THAN_OR_EQUAL (26.2 flipped to reversed-Z / GREATER_THAN_OR_EQUAL —
-                // a per-version constant, NOT copyable across the two backends).
+                // Same as vanilla ENTITY_TRANSLUCENT_EMISSIVE. 26.1.2 uses standard Z depth, so the compare is
+                // LESS_THAN_OR_EQUAL. 26.2 switched to reversed Z with GREATER_THAN_OR_EQUAL, so this constant differs
+                // per version and must NOT be copied between backends.
                 .withDepthStencilState(DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
                 .build()
         )
@@ -79,7 +80,7 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
         PIPELINE; PIPELINE_TRANSLUCENT; PIPELINE_EMISSIVE
     }
 
-    // No feature-renderer registry on 26.1.2 — FeatureRenderDispatcherMixin drives the draws.
+    // 26.1.2 has no feature renderer registry; FeatureRenderDispatcherMixin drives the draws.
     override fun installInjection() {}
 
     override fun submit(
@@ -93,18 +94,18 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
         mode: DrawMode,
         color: Int,
     ) {
-        // collector is unused on 26.1.2: the mixin injects the draw, not the vanilla submit system.
+        // collector is unused on 26.1.2, because the mixin injects the draw instead of using vanilla's submit system.
         if (!active) return
         queue.add(Draw(mesh as GpuMesh, palette, snapshotPose(pose), texture, light, overlay, mode, color))
     }
 
-    // 26.1.2 writeTransform takes (modelView, color, modelOffset, texMat).
+    // On 26.1.2, writeTransform takes (modelView, color, modelOffset, texMat).
     override fun writeTransform(color: Vector4f): GpuBufferSlice =
         RenderSystem.getDynamicUniforms()
             .writeTransform(Matrix4f(RenderSystem.getModelViewMatrix()), color, ZERO, IDENTITY)
 
-    // getTextures() resolves Sampler0 + (lightmap/overlay) for the current frame — the 26.1.2
-    // counterpart of 26.2's prepareTextures(); a prime in-game verify point for lighting.
+    // getTextures() resolves Sampler0 plus the lightmap and overlay for the current frame. It is the 26.1.2 counterpart
+    // of prepareTextures() on 26.2, and a good place to check lighting in game.
     override fun resolveTextures(setup: RenderSetup): Tex = setup.textures
 
     override fun bindTextures(pass: RenderPass, textures: Tex) {
@@ -129,18 +130,21 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
 
     private val queue = ArrayList<Draw>()
 
-    // Draws already flushed this frame, and this scope's prepared tail.
+    // Draws already flushed this frame, and the prepared tail of this scope.
     //
-    // A frame runs several feature-render scopes — the world pass, then a GUI portrait per PiP, the
-    // first-person hand — and each ends in the renderSolid/renderBlended pair below. The queue is only
-    // emptied at endFrame, so a scope must draw ONLY what was submitted since the previous one ended,
-    // or it repaints the whole world's cosmetics into itself. That is the entire invariant: no scope
-    // needs to know which one it is. (It used to guess, by whether it sat inside renderAllFeatures,
-    // and got it wrong — GUI PiPs go through renderAllFeatures too, so every portrait drew nothing.)
+    // A frame runs several feature render scopes (the world pass, then one GUI portrait per PiP, then the first-person
+    // hand), and each ends in the renderSolid/renderBlended pair below. The queue is only emptied at endFrame, so a
+    // scope must draw ONLY what was submitted since the previous scope ended, or it paints the whole world's cosmetics
+    // into itself. That is the whole invariant, and no scope needs to know which one it is. (It used to guess by
+    // whether it was inside renderAllFeatures, and got it wrong: GUI PiPs go through renderAllFeatures too, so every
+    // portrait drew nothing.)
     private var flushed = 0
     private var scope: List<PreparedDraw<Tex>> = emptyList()
 
-    /** Mixin: tail of FeatureRenderDispatcher.renderSolidFeatures — prepares this scope, draws cutout. */
+    /**
+     * Called by the mixin at the tail of FeatureRenderDispatcher.renderSolidFeatures. Prepares this scope and draws the
+     * cutout draws.
+     */
     fun renderSolid() {
         if (!active) { queue.clear(); flushed = 0; return }
         try {
@@ -152,7 +156,10 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
         }
     }
 
-    /** Mixin: tail of FeatureRenderDispatcher.renderTranslucentFeatures — draws blended, far→near. */
+    /**
+     * Called by the mixin at the tail of FeatureRenderDispatcher.renderTranslucentFeatures. Draws the blended draws,
+     * from far to near.
+     */
     fun renderBlended() {
         if (!active || scope.isEmpty()) return
         try {
@@ -164,7 +171,7 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
         }
     }
 
-    /** Mixin: FeatureRenderDispatcher.endFrame — clear the queue and retire buffers/meshes. */
+    /** Called by the mixin at FeatureRenderDispatcher.endFrame. Clears the queue and retires buffers and meshes. */
     fun endFrame() {
         queue.clear()
         flushed = 0
@@ -172,7 +179,7 @@ internal object GpuCosmetics : SkinnedGpuBackend<Tex>() {
         retireFrame()
     }
 
-    /** Mixin: FeatureRenderDispatcher.close — free every buffer and mesh at shutdown. */
+    /** Called by the mixin at FeatureRenderDispatcher.close. Frees every buffer and mesh at shutdown. */
     fun close() = closeBuffers()
 
     private val IDENTITY = Matrix4f()

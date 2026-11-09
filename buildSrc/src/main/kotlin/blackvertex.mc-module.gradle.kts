@@ -1,4 +1,3 @@
-import org.gradle.api.publish.PublishingExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 

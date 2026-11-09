@@ -3,8 +3,8 @@ package org.blackaddons.blackvertex.backend.gpu
 import com.mojang.renderpearl.api.GpuFormat
 import com.mojang.renderpearl.api.vertex.VertexFormat
 
-// 26.2 skinned vertex format: the WebGPU-style GpuFormat attribute API. Bone indices are a real
-// integer (uint) attribute here. The shared GpuMesh packs the matching bytes; this only declares them.
+// 26.3 skinned vertex format, built with the WebGPU-style GpuFormat attribute API. Bone indices are a real integer
+// (uint) attribute here. The shared GpuMesh packs the matching bytes; this only declares them.
 internal object SkinnedFormat {
     val FORMAT: VertexFormat = VertexFormat.builder(0)
         .addAttribute("Position", GpuFormat.RGB32_FLOAT)

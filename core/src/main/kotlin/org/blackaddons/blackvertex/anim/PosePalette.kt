@@ -9,16 +9,16 @@ import org.joml.Matrix4f
 import org.joml.Quaternionf
 import org.joml.Vector3f
 
-// Computes the bone matrix palette (finalBone[i] = globalAnimated[i] * inverseBind[i])
-// for a skeleton at a given animation time. Keyed values are basis deltas:
-// animatedLocal = bindLocal * basis(loc, rot, scale), so a channel-less bone stays in
-// rest pose. Not thread-safe; one instance per concurrent render job, zero-alloc per call.
+// Computes the bone matrix palette (finalBone[i] = globalAnimated[i] * inverseBind[i]) for a skeleton at a given
+// animation time. Keyed values are basis deltas: animatedLocal = bindLocal * basis(loc, rot, scale), so a bone without
+// a channel stays in its rest pose. Not thread-safe: use one instance per concurrent render job. A call allocates
+// nothing.
 @InternalBlackVertexApi
 class PosePalette(private val skeleton: Skeleton) {
 
     val matrices: Array<Matrix4f> = Array(skeleton.boneCount) { Matrix4f() }
 
-    // Global (model-space) animated transform per bone; parent-accumulated in one pass.
+    // The global (model space) animated transform of each bone, accumulated from the parents in one pass.
     private val global: Array<Matrix4f> = Array(skeleton.boneCount) { Matrix4f() }
 
     private val basis = Matrix4f()
@@ -27,10 +27,7 @@ class PosePalette(private val skeleton: Skeleton) {
     private val r = Quaternionf()
     private val s = Vector3f()
 
-    /**
-     * Fill [matrices] for [animation] sampled at [timeSeconds] (looping).
-     * Pass a null animation for the bind pose.
-     */
+    /** Fills [matrices] for [animation] sampled at [timeSeconds], looping. Pass a null animation for the bind pose. */
     fun update(animation: Animation?, timeSeconds: Float) {
         val time = if (animation != null && animation.durationSeconds > 0f)
             timeSeconds % animation.durationSeconds
@@ -73,15 +70,15 @@ class PosePalette(private val skeleton: Skeleton) {
     private fun sampleQuat(keys: List<Keyframe<Quaternionf>>, time: Float, out: Quaternionf): Quaternionf {
         val a = locate(keys, time)
         val b = minOf(a + 1, keys.lastIndex)
-        // JOML's slerp handles the dot<0 sign flip internally, avoiding the long path.
+        // JOML's slerp flips the sign for dot < 0 itself, so it never takes the long way around.
         return keys[a].value.slerp(keys[b].value, locAlpha, out)
     }
 
-    // Result channel of locate(); a field instead of a Triple to keep sampling alloc-free.
+    // A second result of locate(). It is a field instead of a Triple so sampling allocates nothing.
     private var locAlpha = 0f
 
-    // Lower keyframe index bracketing time (clamped so index+1 stays valid); locAlpha holds
-    // the blend factor. Linear scan — per-bone key counts are small.
+    // The lower keyframe index around the time, clamped so index + 1 stays valid. locAlpha holds the blend factor. A
+    // linear scan is fine, because each bone has few keys.
     private fun locate(keys: List<Keyframe<*>>, time: Float): Int {
         locAlpha = 0f
         if (keys.size == 1 || time <= keys.first().timeSeconds) return 0

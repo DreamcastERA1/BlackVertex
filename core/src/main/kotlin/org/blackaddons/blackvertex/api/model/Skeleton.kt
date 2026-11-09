@@ -2,25 +2,25 @@ package org.blackaddons.blackvertex.api.model
 
 import org.joml.Matrix4f
 
-/** Bone hierarchy. Bones are stored in topological order: a parent always precedes its children. */
+/** The bone hierarchy. Bones are stored in topological order: a parent always comes before its children. */
 class Skeleton(val bones: List<Bone>) {
     val boneCount: Int get() = bones.size
 
     private val indexByName: Map<String, Int> =
         bones.withIndex().associate { (i, b) -> b.name to i }
 
-    /** Bone index by name, or -1 if absent. */
+    /** The bone index for [name], or -1 if there is no such bone. */
     fun indexOf(name: String): Int = indexByName[name] ?: -1
 
     companion object {
-        /** A one-bone skeleton with an identity root — for unskinned/static models. */
+        /** A one-bone skeleton with an identity root, for unskinned or static models. */
         fun singleRoot(name: String = "root"): Skeleton =
             Skeleton(listOf(Bone(name, -1, Matrix4f(), Matrix4f())))
 
         /**
-         * Build from bones given by their global rest matrix, in parent-before-child order.
-         * Derives each [Bone.bindLocal] (parentGlobal⁻¹·global) and [Bone.inverseBind] (global⁻¹) —
-         * the bind convention every loader must share, or the animated mesh explodes.
+         * Builds a skeleton from bones given by their global rest matrix, in parent-before-child order. It derives each
+         * [Bone.bindLocal] (parentGlobal⁻¹·global) and [Bone.inverseBind] (global⁻¹). Every loader must share this bind
+         * convention, or the animated mesh explodes.
          */
         fun fromGlobalBind(bones: List<GlobalBone>): Skeleton {
             val indexByName = bones.withIndex().associate { (i, b) -> b.name to i }
@@ -45,17 +45,16 @@ class GlobalBone(val name: String, val parent: String?, val global: Matrix4f)
 /**
  * A single bone.
  *
- * The .bobj stores each bone's global rest matrix (armature space). From it we derive:
- *  - [bindLocal]  : rest transform relative to the parent. Animation applies a *basis*
- *    delta on top of this (`animatedLocal = bindLocal * basis`), matching Blender pose
- *    semantics — keyed rotation/scale are deltas from rest, not absolute local values.
- *  - [inverseBind]: inverse of the global rest matrix. Moves a vertex from model space
- *    into bone space so the animated global transform can place it. Missing this =
- *    exploding mesh.
+ * The .bobj stores each bone's global rest matrix (armature space), and we derive two matrices from it:
+ * - [bindLocal]: the rest transform relative to the parent. Animation applies a *basis* delta on top of it
+ *   (`animatedLocal = bindLocal * basis`), as Blender poses do: keyed rotation and scale are deltas from the rest pose,
+ *   not absolute local values.
+ * - [inverseBind]: the inverse of the global rest matrix. It moves a vertex from model space into bone space, so the
+ *   animated global transform can place it. Without it, the mesh explodes.
  */
 class Bone(
     val name: String,
-    /** Index into [Skeleton.bones], or -1 for a root bone. */
+    /** The index into [Skeleton.bones], or -1 for a root bone. */
     val parent: Int,
     val bindLocal: Matrix4f,
     val inverseBind: Matrix4f,

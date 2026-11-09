@@ -1,25 +1,25 @@
 package org.blackaddons.blackvertex.api.attach
 
-/** The player part a cosmetic rides — it inherits that part's pivot and animated rotation. */
+/** The player part a cosmetic follows. The cosmetic inherits that part's pivot and animated rotation. */
 enum class FollowPart { NONE, BODY, HEAD, LEFT_ARM, RIGHT_ARM, LEFT_LEG, RIGHT_LEG }
 
 /**
  * How a preset and its corrections combine in [AttachmentPoint.effective].
  *
- * [ADD] (the default) treats the fields as a delta over the preset — zeros land exactly on
- * the preset; [REPLACE] treats them as absolute values, keeping only the preset's [FollowPart].
+ * [ADD] (the default) treats the fields as a delta over the preset, so zeros land exactly on the preset. [REPLACE]
+ * treats them as absolute values and keeps only the preset's [FollowPart].
  */
 enum class AttachMode { ADD, REPLACE }
 
 /**
  * Placement of a cosmetic on the player.
  *
- * Applied in the feature layer's space, which — like vanilla layer transforms — is in
- * **block units** with **+Y pointing DOWN** and **+Z pointing BACK** (behind the player).
- * [follow] first rides a body part (so the cosmetic sways with it); then [offsetX]/[offsetY]/
- * [offsetZ] move it, the rotations orient it, and [scale] resizes it.
+ * It is applied in the feature layer's space, which, like vanilla layer transforms, is in **block units** with **+Y
+ * pointing DOWN** and **+Z pointing BACK** (behind the player). [follow] first attaches it to a body part, so the
+ * cosmetic sways with that part. Then [offsetX], [offsetY] and [offsetZ] move it, the rotations orient it, and [scale]
+ * resizes it.
  *
- * Prefer a preset from [AttachmentPoint], tweaking with `.copy(...)` when a model needs it.
+ * Prefer a preset from [AttachmentPoint], and adjust it with `.copy(...)` when a model needs it.
  */
 data class Attachment(
     val offsetX: Float = 0f,
@@ -33,39 +33,39 @@ data class Attachment(
 )
 
 /**
- * Known attachment presets. Use `AttachmentPoint.X.attachment`, or `AttachmentPoint.X.effective(...)`
- * to layer per-cosmetic corrections onto it.
+ * Known attachment presets. Use `AttachmentPoint.X.attachment`, or `AttachmentPoint.X.effective(...)` to add
+ * per-cosmetic corrections on top.
  *
- * Offsets are sensible defaults for the Iggy3D pack's origin convention — a different model may still
- * need a small override.
+ * The offsets are sensible defaults for the origin convention of the Iggy3D pack. A different model may still need a
+ * small override.
  */
 enum class AttachmentPoint(val attachment: Attachment) {
-    /** Tail base sitting on the lower back, riding the torso. */
+    /** The base of a tail on the lower back, following the torso. */
     LOWER_BACK(Attachment(offsetY = 0.4f, offsetZ = 0.04f, follow = FollowPart.BODY)),
 
     /**
-     * Ears on top of the head, riding the head. `pitch 180` maps this pack's Blender axes to
-     * model space — flips Y (upright) and Z (faces forward), keeps X (no mirror). Centered on
-     * the head; offsetY -0.05 seats them on the crown (calibrated on the Iggy3D cat ears).
+     * Ears on top of the head, following the head. `pitch 180` maps this pack's Blender axes to model space: it flips Y
+     * (upright) and Z (facing forward) and keeps X (no mirror). Centered on the head; offsetY -0.05 seats the ears on
+     * the crown (calibrated on the Iggy3D cat ears).
      */
     HEAD_TOP(Attachment(offsetY = -0.05f, pitchDeg = 180f, follow = FollowPart.HEAD)),
 
-    /** Bracelet/cuff around the left wrist. Offset reaches the lower third of the arm. */
+    /** A bracelet or cuff around the left wrist. The offset reaches the lower third of the arm. */
     LEFT_WRIST(Attachment(offsetY = 0.5f, follow = FollowPart.LEFT_ARM)),
 
-    /** Bracelet/cuff around the right wrist. */
+    /** A bracelet or cuff around the right wrist. */
     RIGHT_WRIST(Attachment(offsetY = 0.5f, follow = FollowPart.RIGHT_ARM)),
 
-    /** Left ankle, e.g. leg bands. */
+    /** The left ankle, for example for leg bands. */
     LEFT_ANKLE(Attachment(offsetY = 0.65f, follow = FollowPart.LEFT_LEG)),
 
-    /** Right ankle. */
+    /** The right ankle. */
     RIGHT_ANKLE(Attachment(offsetY = 0.65f, follow = FollowPart.RIGHT_LEG)),
 
-    /** Flat on the upper back, riding the torso — backpacks, wings, capes' anchor. */
+    /** Flat on the upper back, following the torso: backpacks, wings, and the anchor of capes. */
     UPPER_BACK(Attachment(offsetY = 0.15f, offsetZ = 0.14f, follow = FollowPart.BODY)),
 
-    /** Around the waist/belt line, riding the torso. */
+    /** Around the waist or belt line, following the torso. */
     WAIST(Attachment(offsetY = 0.7f, follow = FollowPart.BODY)),
 
     ;
@@ -73,12 +73,12 @@ enum class AttachmentPoint(val attachment: Attachment) {
     /**
      * Combines this preset with per-cosmetic corrections into the final [Attachment].
      *
-     * In [AttachMode.ADD] offsets and rotations add component-wise (degrees, before matrices —
-     * not a quaternion compose), and [scale] multiplies; in [AttachMode.REPLACE] they are taken
-     * as-is. [follow] overrides the preset when non-null, otherwise the preset's is kept.
+     * In [AttachMode.ADD], offsets and rotations are added per component (in degrees, before building matrices, not as
+     * a quaternion composition), and [scale] is multiplied. In [AttachMode.REPLACE] they are taken as they are. A
+     * non-null [follow] overrides the preset's; otherwise the preset's is kept.
      *
-     * This is the reference math a consuming manifest parser must mirror so a cosmetic placed
-     * in an editor lands identically in-game.
+     * This is the reference math that a manifest parser in the consuming mod must copy, so a cosmetic placed in an
+     * editor lands exactly the same in game.
      */
     fun effective(
         offsetX: Float = 0f,

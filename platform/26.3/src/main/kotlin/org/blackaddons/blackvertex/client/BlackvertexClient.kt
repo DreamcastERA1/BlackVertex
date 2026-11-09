@@ -9,15 +9,13 @@ class BlackvertexClient : ClientModInitializer {
 
     override fun onInitializeClient() {
         PlayerCosmetics.init()
-        // Install the 26.2 GPU backend behind the shared seam, then register the skinning pipeline
-        // before the loading screen's pipeline-compile pass (GPU default, CPU forced via
-        // -Dblackvertex.backend=cpu).
+        // Installs the 26.3 GPU backend behind the shared interface, then registers the skinning pipeline before the
+        // loading screen compiles pipelines. The GPU path is the default; -Dblackvertex.backend=cpu forces the CPU
+        // path.
         BlackVertexGpu.backend = GpuCosmetics
         GpuCosmetics.init()
 
         if (BlackvertexDemo.ENABLED) {
-            // Command-based demo tools are 26.2-specific (Fabric's client command API); the cosmetic
-            // setup itself is shared.
             DemoStress.register()
             DemoTune.register()
             BlackvertexDemo.setup()

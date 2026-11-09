@@ -1,17 +1,17 @@
 package org.blackaddons.blackvertex.backend.gpu
 
-import org.blackaddons.blackvertex.compat.GpuBuffer
 import com.mojang.blaze3d.systems.RenderSystem
 import org.blackaddons.blackvertex.api.model.Model
+import org.blackaddons.blackvertex.compat.GpuBuffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-// Static GPU residence of a Model: bind-pose vertices + bone influences + triangle index buffer,
-// uploaded once; per frame only the palette UBO changes. Real TRIANGLES topology — the degenerate-
-// quad trick is a vanilla-pipeline constraint our own pipeline doesn't have.
+// A Model kept on the GPU: bind pose vertices, bone influences and a triangle index buffer, uploaded once. Per frame
+// only the palette UBO changes. It uses real TRIANGLES topology: the degenerate quad trick is a limit of the vanilla
+// pipeline that our own pipeline does not have.
 //
-// The upload/packing is version-neutral (shared). The vertex FORMAT is NOT here: it's built per
-// platform (26.3 via GpuFormat, 26.1.2 via VertexFormatElement) and lives beside each pipeline.
+// The upload and packing are version-neutral (shared). The vertex FORMAT is not here: it is built per platform (26.2
+// and 26.3 through GpuFormat, 26.1.2 through VertexFormatElement) and lives next to each pipeline.
 internal class GpuMesh private constructor(
     val vertexBuffer: GpuBuffer,
     val indexBuffer: GpuBuffer,
@@ -25,14 +25,14 @@ internal class GpuMesh private constructor(
     }
 
     companion object {
-        // Bone cap baked into the shader (the MAX_BONES define sizes the palette UBO).
+        // The bone limit baked into the shader (the MAX_BONES define sizes the palette UBO).
         const val MAX_BONES = 16
 
-        // Bytes per vertex: pos 3f + uv 2f + normal 3f + indices 4×u8 + weights 4×un8.
+        // Bytes per vertex: position 3f, UV 2f, normal 3f, indices 4 x u8 and weights 4 x un8.
         private const val VERTEX_BYTES = 12 + 8 + 12 + 4 + 4
 
-        // Render thread only (touches the device). Returns null when the model exceeds shader limits —
-        // the caller falls back to the CPU path.
+        // Render thread only, because it touches the device. Returns null when the model exceeds the shader limits, and
+        // the caller then falls back to the CPU path.
         fun upload(model: Model, name: String): GpuMesh? {
             val boneCount = model.skeleton.boneCount
             if (boneCount > MAX_BONES) return null
@@ -67,8 +67,8 @@ internal class GpuMesh private constructor(
             )
         }
 
-        // Independent rounding can sum to 252..256/255, visibly scaling the skin matrix; largest-
-        // remainder distribution keeps the UNORM weights summing to exactly 255 (== 1.0).
+        // Rounding each weight on its own can sum to 252..256 out of 255, which visibly scales the skin matrix. A
+        // largest remainder distribution keeps the UNORM weights summing to exactly 255 (1.0).
         private fun putQuantizedWeights(out: ByteBuffer, w: FloatArray) {
             val q = IntArray(4) { (w[it] * 255f).toInt() }
             var deficit = 255 - q.sum()

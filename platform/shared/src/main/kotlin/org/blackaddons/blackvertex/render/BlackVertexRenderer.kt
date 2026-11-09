@@ -9,8 +9,8 @@ import org.blackaddons.blackvertex.api.InternalBlackVertexApi
 import org.blackaddons.blackvertex.api.model.Model
 import org.blackaddons.blackvertex.backend.cpu.CpuSkinner
 
-// CPU-path glue: skins on the CPU and emits standard entity-format vertices through
-// submitCustomGeometry, so vanilla lighting/overlay/outline apply for free.
+// Glue for the CPU path: skins on the CPU and emits standard entity format vertices through submitCustomGeometry, so
+// vanilla lighting, overlay and outlines apply for free.
 @OptIn(InternalBlackVertexApi::class)
 internal object BlackVertexRenderer {
 

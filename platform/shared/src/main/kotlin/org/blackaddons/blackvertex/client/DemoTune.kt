@@ -13,14 +13,14 @@ import org.blackaddons.blackvertex.api.attach.AttachmentPoint
 import org.blackaddons.blackvertex.render.PlayerCosmetics
 
 /**
- * Demo-only runtime attachment tuner — iterate offsets without relaunching:
+ * Demo-only attachment tuner, to try offsets without relaunching:
  *
- *  - `/blackvertex-tune list` — active cosmetics with indices and current attachments
- *  - `/blackvertex-tune <i> point <PRESET>` — snap to an [AttachmentPoint] preset
- *  - `/blackvertex-tune <i> offset <x> <y> <z>` / `rotate <pitch> <yaw> <roll>` / `scale <s>`
+ * - `/blackvertex-tune list` lists the active cosmetics with their indices and current attachments.
+ * - `/blackvertex-tune <i> point <PRESET>` snaps to an [AttachmentPoint] preset.
+ * - `/blackvertex-tune <i> offset <x> <y> <z>`, `rotate <pitch> <yaw> <roll>` and `scale <s>` adjust it.
  *
- * Prints the resulting [Attachment] after each change; copy the numbers into presets or
- * the backend manifest. Also the mechanical prototype of the future cosmetics editor.
+ * It prints the resulting [Attachment] after each change, so you can copy the numbers into presets or the backend
+ * manifest. It is also the first working prototype of the future cosmetics editor.
  */
 internal object DemoTune {
 

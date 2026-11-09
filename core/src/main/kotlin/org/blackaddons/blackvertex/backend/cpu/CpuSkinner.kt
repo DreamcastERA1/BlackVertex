@@ -5,8 +5,8 @@ import org.blackaddons.blackvertex.api.model.Vertex
 import org.joml.Matrix4f
 import kotlin.math.sqrt
 
-// CPU skinning: transforms a vertex by its weighted bone matrices — the fallback twin of
-// the GPU vertex shader's blend.
+// CPU skinning: transforms a vertex by its weighted bone matrices. It is the fallback twin of the blend in the GPU
+// vertex shader.
 @InternalBlackVertexApi
 object CpuSkinner {
 

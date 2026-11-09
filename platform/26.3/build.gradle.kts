@@ -41,7 +41,7 @@ loom {
         // The demo (tail + ears + /blackvertex-* commands) is gated on this flag, not isDevelopment,
         // so it never leaks into a shipped jar (see BlackvertexClient). Enable it for the dev client
         // — it reaches the forked game JVM, which a `-D` on the gradle command line would not.
-        property("blackvertex.demo", "true")
+        systemProperties.put("blackvertex.demo", "true")
     }
 }
 

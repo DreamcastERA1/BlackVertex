@@ -1,18 +1,21 @@
 package org.blackaddons.blackvertex.api.model
 
 /**
- * Immutable skeletal mesh: geometry + bones + animation clips. Load via
- * [org.blackaddons.blackvertex.format.ModelFormats]; renderer-agnostic.
+ * An immutable skeletal mesh: geometry, bones and animation clips. Load one through
+ * [org.blackaddons.blackvertex.format.ModelFormats]. It does not depend on the renderer.
  */
 class Model(
     val meshes: List<Mesh>,
     val skeleton: Skeleton,
-    /** Animation clips keyed by name (e.g. "idle", "idlealt"). */
+    /** Animation clips by name, for example "idle" or "idlealt". */
     val animations: Map<String, Animation>,
 ) {
     val hasSkeleton: Boolean get() = skeleton.boneCount > 0
 
-    /** Copy with [extra] clips merged in (same-name clips replaced) — e.g. GeckoLib `.animation.json`. */
+    /**
+     * A copy with the [extra] clips merged in, replacing clips with the same name. For example, clips from a GeckoLib
+     * `.animation.json`.
+     */
     fun withAnimations(extra: Map<String, Animation>): Model = Model(meshes, skeleton, animations + extra)
 
     override fun toString(): String =

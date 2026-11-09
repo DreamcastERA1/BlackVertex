@@ -12,20 +12,20 @@ import org.blackaddons.blackvertex.texture.DynamicTextures
 import org.blackaddons.blackvertex.texture.TextureCompositor
 
 /**
- * Version-neutral demo (gated by `-Dblackvertex.demo=true`): a tail (lower back) and ears (head) on
- * every player, textures composited on the fly from the layered source art to mirror the production
- * flow. Runs on either MC version — the render path (GPU or CPU) is whatever the platform installed.
+ * A version-neutral demo, enabled by `-Dblackvertex.demo=true`: a tail (lower back) and ears (head) on every player,
+ * with textures composited on the fly from the layered source art, the same way production does it. It runs on every MC
+ * version, with whichever render path (GPU or CPU) the platform installed.
  *
- * Not `isDevelopment`: that would leak on when the lib ships inside the parent mod. Command-based
- * demo tools (`/blackvertex-*`) stay per-platform — the Fabric command API is version-specific.
+ * Not gated on `isDevelopment`, because that would switch it on when the library ships inside the parent mod. The
+ * command tools (`/blackvertex-*`) live in DemoStress and DemoTune.
  */
 internal object BlackvertexDemo {
 
     val ENABLED: Boolean = System.getProperty("blackvertex.demo")?.toBoolean() == true
 
-    /** Adds the tail + ears cosmetics and schedules their composited textures. Call once at init. */
+    /** Adds the tail and ears cosmetics and schedules their composited textures. Call it once at init. */
     fun setup() {
-        // Tail — composited dynamic texture + a glowing cyan tip (exercises the emissive pass).
+        // The tail: a composited dynamic texture and a glowing cyan tip, which exercises the emissive pass.
         loadModel("/assets/blackvertex/models/tail/model.bobj")?.let { tail ->
             ClientLifecycleEvents.CLIENT_STARTED.register(
                 ClientLifecycleEvents.ClientStarted {
@@ -44,7 +44,8 @@ internal object BlackvertexDemo {
             )
         }
 
-        // Ears — composited like production: white base ⊗ primary + inner-ear overlay ⊗ accent.
+        // The ears, composited like in production: the white base tinted with the primary color, plus the inner ear
+        // overlay tinted with the accent.
         loadModel("/assets/blackvertex/models/ears/model.bobj")?.let { ears ->
             ClientLifecycleEvents.CLIENT_STARTED.register(
                 ClientLifecycleEvents.ClientStarted { DynamicTextures.register(EARS_TEXTURE, bakeEarsTexture()) }
@@ -55,7 +56,7 @@ internal object BlackvertexDemo {
         }
     }
 
-    /** Tail demo texture: black fur base + a cyan gradient toward the tip. */
+    /** The tail's demo texture: a black fur base with a cyan gradient toward the tip. */
     private fun bakeTailTexture(): NativeImage {
         val base = readImage("/assets/blackvertex/models/tail/base_black.png")
         val overlay = readImage("/assets/blackvertex/models/tail/overlay_gradient.png")
@@ -72,8 +73,8 @@ internal object BlackvertexDemo {
     }
 
     /**
-     * Ears demo texture: the pack's plain-white cat base tinted black (primary), plus the
-     * inner-ear overlay tinted cyan (accent) to match the tail's tip.
+     * The ears' demo texture: the pack's plain white cat base tinted black (primary), plus the inner ear overlay tinted
+     * cyan (accent) to match the tail's tip.
      */
     private fun bakeEarsTexture(): NativeImage {
         val base = readImage("/assets/blackvertex/models/ears/base_plain.png")
@@ -90,7 +91,7 @@ internal object BlackvertexDemo {
         }
     }
 
-    /** Glow layer: cyan wherever the tip gradient is strong, transparent elsewhere. */
+    /** The glow layer: cyan wherever the tip gradient is strong, transparent elsewhere. */
     private fun bakeTailEmissive(): NativeImage {
         val overlay = readImage("/assets/blackvertex/models/tail/overlay_gradient.png")
         overlay.use { overlay ->

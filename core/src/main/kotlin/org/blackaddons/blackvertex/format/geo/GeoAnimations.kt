@@ -11,13 +11,12 @@ import org.joml.Vector3f
 import org.slf4j.LoggerFactory
 
 /**
- * Parser for Bedrock/GeckoLib `.animation.json` clips. Needs the model's [Skeleton] to
- * map bone names to indices: `model.withAnimations(GeoAnimations.parse(text, model.skeleton))`.
+ * Parser for Bedrock and GeckoLib `.animation.json` clips. It needs the model's [Skeleton] to map bone names to
+ * indices: `model.withAnimations(GeoAnimations.parse(text, model.skeleton))`.
  *
- * v1 scope: numeric keyframes only — Molang expressions and GeckoLib easings degrade to
- * a warn + linear/skip, never a crash. Rotation is XYZ euler degrees relative to the rest
- * pose, position is in pixels (/16 to blocks), times are seconds — all straight from the
- * Bedrock conventions.
+ * For now it reads numeric keyframes only. Molang expressions and GeckoLib easings log a warning and fall back to
+ * linear or are skipped, and never crash. Rotation is XYZ Euler degrees relative to the rest pose, position is in
+ * pixels (divided by 16 for blocks), and times are in seconds, all straight from the Bedrock conventions.
  */
 object GeoAnimations {
 
@@ -52,8 +51,8 @@ object GeoAnimations {
                 }
                 val scales = track(bone.get("scale"), name) { t, v -> Keyframe(t, Vector3f(v)) }
 
-                // Each track is sorted ascending, so its last key is its max time; take the max
-                // across all three (concatenating and reading one `last` would miss the others).
+                // Each track is sorted in ascending order, so its last key holds its max time. Take the max across all
+                // three (concatenating them and reading one `last` would miss the others).
                 for (track in listOf(rotations, positions, scales)) {
                     track.lastOrNull()?.let { maxTime = maxOf(maxTime, it.timeSeconds) }
                 }
@@ -63,7 +62,7 @@ object GeoAnimations {
         }
     }
 
-    // One keyed track: either a static value (constant key at t=0) or a "time": value map.
+    // One keyed track: either a static value (a constant key at t = 0) or a "time": value map.
     private inline fun <T> track(el: JsonElement?, anim: String, make: (Float, Vector3f) -> Keyframe<T>): List<Keyframe<T>> {
         el ?: return emptyList()
         vector(el)?.let { return listOf(make(0f, it)) }
@@ -77,8 +76,8 @@ object GeoAnimations {
         }.sortedBy { it.timeSeconds }
     }
 
-    // Accepts [x,y,z], a single number, {"vector":[...]} and {"post":[...]} (pre/post
-    // discontinuities collapse to post; GeckoLib easings degrade to linear).
+    // Accepts [x,y,z], a single number, {"vector":[...]} and {"post":[...]}. Pre and post discontinuities collapse to
+    // post, and GeckoLib easings fall back to linear.
     private fun vector(el: JsonElement): Vector3f? = when {
         el.isJsonArray -> el.asJsonArray.takeIf { it.size() >= 3 && it.all { e -> isNumber(e) } }
             ?.let { Vector3f(it[0].asFloat, it[1].asFloat, it[2].asFloat) }

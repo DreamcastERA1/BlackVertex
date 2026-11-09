@@ -10,21 +10,20 @@ import net.minecraft.client.player.RemotePlayer
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.Entity
 import org.blackaddons.blackvertex.render.PlayerCosmetics
-import java.util.*
+import java.util.UUID
 import kotlin.math.ceil
 import kotlin.math.sqrt
 
 /**
- * Demo-only stress test (registered with the demo flag):
+ * Demo-only stress test, registered with the demo flag:
  *
- *  - `/blackvertex-stress <count>` — spawns `count` client-side [RemotePlayer]s in a grid in
- *    front of you. No server involved: pure render/skinning load, exactly what we want to
- *    benchmark CPU vs GPU paths. Random UUIDs double as a check of the per-player
- *    animation phase spread (tails must NOT wag in sync).
- *  - `/blackvertex-stress clear` — removes everything spawned.
+ * - `/blackvertex-stress <count>` spawns `count` client-side [RemotePlayer]s in a grid in front of you. No server is
+ *   involved, so it is pure render and skinning load, which is exactly what we want to benchmark the CPU and GPU paths
+ *   with. The random UUIDs also check that the animation phase is spread per player (tails must NOT wag in sync).
+ * - `/blackvertex-stress clear` removes everything that was spawned.
  *
- * Bots get ids far above live server ids so [net.minecraft.client.multiplayer.ClientLevel]'s
- * id map never evicts a real entity.
+ * Bots get ids far above live server ids, so the id map of [net.minecraft.client.multiplayer.ClientLevel] never evicts
+ * a real entity.
  */
 internal object DemoStress {
 
@@ -54,7 +53,7 @@ internal object DemoStress {
                             1
                         }
                     )
-                    // Benchmark helper: isolates the cosmetics' cost from vanilla player rendering.
+                    // A benchmark helper that separates the cost of the cosmetics from vanilla player rendering.
                     .then(
                         ClientCommands.literal("cosmetics")
                             .then(ClientCommands.literal("on").executes { ctx -> setCosmetics(ctx.source, 32f); 1 })

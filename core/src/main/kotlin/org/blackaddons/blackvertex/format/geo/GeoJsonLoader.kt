@@ -12,14 +12,14 @@ import org.joml.Matrix4f
 import org.joml.Vector3f
 
 /**
- * [ModelLoader] for Bedrock/GeckoLib geometry (`.geo.json` as exported by Blockbench).
- * Supports bones (pivot hierarchy), box-UV cubes, inflate. Animations come from separate
- * `.animation.json` files (not part of geometry; loaded later).
+ * [ModelLoader] for Bedrock and GeckoLib geometry (`.geo.json` as Blockbench exports it). It supports bones (a pivot
+ * hierarchy), box UV cubes and inflate. Animations come from separate `.animation.json` files, which are not part of
+ * the geometry and are loaded later.
  *
- * Known v1 simplifications (each throws or is noted, never silently wrong):
- *  - per-face UV maps are rejected (box UV only);
- *  - `mirror` is ignored; cube/bone rest `rotation` is applied as XYZ euler — verify
- *    against a real Blockbench export and calibrate if handedness differs.
+ * Known simplifications, each of which throws or is noted, never silently wrong:
+ * - Per-face UV maps are rejected (box UV only).
+ * - `mirror` is ignored, and the rest `rotation` of cubes and bones is applied as XYZ Euler. Check it against a real
+ *   Blockbench export and calibrate it if the handedness differs.
  */
 object GeoJsonLoader : ModelLoader {
 
@@ -35,8 +35,8 @@ object GeoJsonLoader : ModelLoader {
 
         val boneJsons = geometry.getAsJsonArray("bones")?.map { it.asJsonObject } ?: emptyList()
 
-        // Each bone's frame sits at its pivot so animations rotate around the right point; rest
-        // rotation is baked into the cube geometry below, not into the bind matrix.
+        // Each bone's frame sits at its pivot, so animations rotate around the right point. The rest rotation is baked
+        // into the cube geometry below, not into the bind matrix.
         val skeleton = Skeleton.fromGlobalBind(
             boneJsons.map { b ->
                 val pivot = vec(b, "pivot")
@@ -71,7 +71,7 @@ object GeoJsonLoader : ModelLoader {
                     inflate = cube.get("inflate")?.asFloat ?: 0f,
                     bone = boneIdx,
                 )
-                // Bake rest rotations (cube's own, then the bone's) into the bind pose.
+                // Bakes the rest rotations (the cube's own, then the bone's) into the bind pose.
                 rotate(mesh, cube.get("rotation")?.let { vec(cube, "rotation") }, cube.get("pivot")?.let { vec(cube, "pivot") } ?: origin)
                 rotate(mesh, restRotation, bonePivot)
                 meshes.add(mesh)

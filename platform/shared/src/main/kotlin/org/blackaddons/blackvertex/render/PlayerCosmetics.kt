@@ -14,22 +14,21 @@ import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * A BlackVertex model attached to players as a cosmetic (ears, tail, …).
+ * A BlackVertex model attached to players as a cosmetic, like ears or a tail.
  *
- * @param model       the parsed mesh + skeleton + clips
- * @param clip        animation clip name to play, or null for the static bind pose
- * @param texture     texture to sample; null falls back to a placeholder
- * @param emissive    optional glow layer: same mesh drawn fullbright (unlit) on top,
- *                    sampling this texture — its alpha is the glow mask
- * @param translucent draw the base with alpha blending instead of alpha cutout
- * @param color       ARGB modulator over the whole cosmetic (0xFFFFFFFF = untouched); an alpha
- *                    below 0xFF renders it as a translucent "ghost", the RGB tints it. Mutable so
- *                    a fade or flash can be driven per frame.
- * @param speed       animation playback speed multiplier (1 = authored speed)
- * @param attach      where/how the model sits on the player; mutable for runtime tuning
- * @param uuid        draw only on the player with this UUID; null = every player (the demo default)
- * @param visibleFor  extra per-player gate on the rendered state; null = no extra gate. Combined with
- *                    [uuid] by AND — the cosmetic draws only when both pass.
+ * @param model the parsed mesh, skeleton and clips.
+ * @param clip the animation clip to play, or null for the static bind pose.
+ * @param texture the texture to sample. Null falls back to a placeholder.
+ * @param emissive an optional glow layer: the same mesh drawn fullbright (unlit) on top, sampling this texture. Its
+ *     alpha is the glow mask.
+ * @param translucent draws the base with alpha blending instead of alpha cutout.
+ * @param color an ARGB modulator over the whole cosmetic (0xFFFFFFFF leaves it unchanged). An alpha below 0xFF draws it
+ *     as a translucent "ghost", and the RGB tints it. Mutable, so a fade or flash can be driven per frame.
+ * @param speed the animation playback speed multiplier (1 is the authored speed).
+ * @param attach where and how the model sits on the player. Mutable for tuning at runtime.
+ * @param uuid draws only on the player with this UUID. Null draws on every player (the demo default).
+ * @param visibleFor an extra per-player check on the rendered state. Null means no extra check. Both this and [uuid]
+ *     must pass for the cosmetic to draw.
  */
 class PlayerCosmetic(
     val model: Model,
@@ -45,53 +44,51 @@ class PlayerCosmetic(
 )
 
 /**
- * Registry of player cosmetics and the Fabric hook that installs the render layer
- * onto the player renderer. Cosmetics can be added at any time (e.g. streamed from a
- * backend); the layer reads this list every frame.
+ * The registry of player cosmetics and the Fabric hook that adds the render layer to the player renderer. Cosmetics can
+ * be added at any time (streamed from a backend, for example), and the layer reads this list every frame.
  */
 object PlayerCosmetics {
 
     /**
-     * Cosmetics on players farther than this many blocks from the camera are skipped
-     * entirely (they are a few pixels tall there anyway). The consuming mod may override;
-     * `Float.MAX_VALUE` disables the cut-off.
+     * Cosmetics on players farther than this many blocks from the camera are skipped entirely, since they are only a
+     * few pixels tall there. The consuming mod may change it, and `Float.MAX_VALUE` turns the cut-off off.
      */
     var renderDistanceBlocks: Float = 32f
 
     /**
-     * How the layer maps a render state to the player's UUID (for per-player targeting). The default
-     * reads the world entity by its id, which fails for an off-world preview — a GUI portrait of an
-     * unspawned fake player. A consuming mod that stashes the UUID on the render state (via a mixin)
-     * can point this at that, so previews target correctly too.
+     * How the layer gets the player's UUID from a render state, for per-player targeting. The default reads the world
+     * entity by its id, which fails for a preview outside the world, like a GUI portrait of a fake player that was
+     * never spawned. A consuming mod that stores the UUID on the render state (with a mixin) can point this at it, so
+     * previews target correctly too.
      */
     var uuidResolver: (AvatarRenderState) -> UUID? = { state ->
         Minecraft.getInstance().level?.getEntity(state.id)?.uuid
     }
 
-    // The layer iterates this every frame; snapshot semantics of COW keep add/remove safe
-    // from any thread. Exposed internally to avoid a defensive copy per player per frame.
+    // The layer goes through this every frame. CopyOnWriteArrayList snapshots keep adding and removing safe from any
+    // thread. It is internal so the layer does not need a defensive copy per player per frame.
     internal val active = CopyOnWriteArrayList<PlayerCosmetic>()
 
     fun add(cosmetic: PlayerCosmetic) {
         active.add(cosmetic)
     }
 
-    /** Remove a previously added cosmetic; frees its GPU buffers once unreferenced. */
+    /** Removes a previously added cosmetic and frees its GPU buffers once nothing references them. */
     fun remove(cosmetic: PlayerCosmetic) {
         active.remove(cosmetic)
         BlackVertexGpu.backend?.releaseUnused(active.map { it.model })
     }
 
-    /** Remove all cosmetics (e.g. on backend re-sync). */
+    /** Removes all cosmetics, for example when syncing with the backend again. */
     fun clear() {
         active.clear()
         BlackVertexGpu.backend?.releaseUnused(emptyList())
     }
 
-    /** Snapshot of the active cosmetics. */
+    /** A snapshot of the active cosmetics. */
     fun all(): List<PlayerCosmetic> = active.toList()
 
-    /** Register the feature layer on the player renderer. Call once from client init. */
+    /** Registers the feature layer on the player renderer. Call it once from client init. */
     fun init() {
         LivingEntityRenderLayerRegistrationCallback.EVENT.register(
             LivingEntityRenderLayerRegistrationCallback { _, renderer, helper, _ ->

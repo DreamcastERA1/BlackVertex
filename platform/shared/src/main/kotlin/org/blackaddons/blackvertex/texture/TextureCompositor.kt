@@ -1,16 +1,18 @@
 package org.blackaddons.blackvertex.texture
 
 import com.mojang.blaze3d.platform.NativeImage
+import org.blackaddons.blackvertex.texture.TextureCompositor.compose
 import kotlin.math.roundToInt
 
 object TextureCompositor {
 
     /**
      * An overlay image plus the accent color (ARGB) it is tinted with.
-     * @param invertAlpha flip the mask (use `255 - alpha`) when the art is authored in the
-     *        opposite orientation — e.g. a gradient dense at the base when you want it at the tip.
-     * @param supportsAlpha honor [tintArgb]'s alpha byte as a per-layer opacity (0xFF = full,
-     *        0x80 = 50%); when false the tint alpha is ignored and the layer is applied fully.
+     *
+     * @param invertAlpha flips the mask (uses `255 - alpha`) when the art is authored the other way around, for example
+     *     a gradient that is dense at the base when you want it at the tip.
+     * @param supportsAlpha uses [tintArgb]'s alpha byte as the layer's opacity (0xFF is full, 0x80 is 50%). When false,
+     *     the tint alpha is ignored and the layer is applied fully.
      */
     class Layer(
         val image: NativeImage,
@@ -20,10 +22,12 @@ object TextureCompositor {
     )
 
     /**
-     * @param base        grayscale base image (owns its silhouette in alpha)
-     * @param baseTintArgb primary color multiplied onto the base (0xFFFFFFFF = untinted)
-     * @param overlays     accent layers, composited in order
-     * @return a new [NativeImage]; the caller owns it. Inputs are not closed.
+     * Tints [base] and draws [overlays] over it.
+     *
+     * @param base a grayscale base image whose alpha holds the silhouette.
+     * @param baseTintArgb the primary color multiplied onto the base (0xFFFFFFFF leaves it untinted).
+     * @param overlays accent layers, composited in order.
+     * @return a new [NativeImage] that the caller owns. The inputs are not closed.
      */
     fun compose(base: NativeImage, baseTintArgb: Int, overlays: List<Layer>): NativeImage {
         val w = base.width
@@ -44,13 +48,13 @@ object TextureCompositor {
                     if (x >= layer.image.width || y >= layer.image.height) continue
                     val op = layer.image.getPixel(x, y)
                     val tint = layer.tintArgb
-                    // Blend strength = overlay mask alpha (optionally inverted) scaled by the
-                    // per-layer opacity: tint alpha when supported, otherwise fully applied.
+                    // Blend strength: the overlay's mask alpha (inverted if set) scaled by the layer's opacity, which
+                    // is the tint alpha when supported and full otherwise.
                     val mask = if (layer.invertAlpha) 255 - argbA(op) else argbA(op)
                     val tintA = if (layer.supportsAlpha) argbA(tint) else 255
                     val f = mask * tintA / 255
                     if (f == 0) continue
-                    // Accent = tint color modulated by the overlay's (white) RGB.
+                    // Accent: the tint color multiplied by the overlay's (white) RGB.
                     val ar = argbR(tint) * argbR(op) / 255
                     val ag = argbG(tint) * argbG(op) / 255
                     val ab = argbB(tint) * argbB(op) / 255
@@ -66,11 +70,10 @@ object TextureCompositor {
     }
 
     /**
-     * Bake the emissive (glow) [layers] into a mostly-transparent image: each layer contributes
-     * `rgb = tint ⊗ overlayRGB` where its alpha mask is set, source-over combined; rendered later as a
-     * separate fullbright pass (the glowing tip). Alpha-supporting layers honor the tint's alpha as a
-     * per-layer opacity, like [compose]. Returns null when there are no emissive layers; the caller
-     * owns the result. Inputs are not closed.
+     * Bakes the emissive (glow) [layers] into a mostly transparent image. Each layer adds `rgb = tint ⊗ overlayRGB`
+     * where its alpha mask is set, combined source-over, and the result is drawn later as a separate fullbright pass
+     * (the glowing tip). Layers that support alpha use the tint's alpha as their opacity, as in [compose]. Returns null
+     * when there are no emissive layers. The caller owns the result, and the inputs are not closed.
      */
     fun composeEmissive(layers: List<Layer>): NativeImage? {
         if (layers.isEmpty()) return null
@@ -89,7 +92,7 @@ object TextureCompositor {
                     var a = if (layer.invertAlpha) 255 - argbA(sp) else argbA(sp)
                     if (tintA != 255) a = a * tintA / 255
                     if (a == 0) continue
-                    // Accent = tint modulated by the overlay's (white) RGB.
+                    // Accent: the tint multiplied by the overlay's (white) RGB.
                     val sr = tR * argbR(sp) / 255
                     val sg = tG * argbG(sp) / 255
                     val sb = tB * argbB(sp) / 255
