@@ -9,9 +9,9 @@ class BlackvertexClient : ClientModInitializer {
 
     override fun onInitializeClient() {
         PlayerCosmetics.init()
-        // Installs the 26.3 GPU backend behind the shared interface, then registers the skinning pipeline before the
-        // loading screen compiles pipelines. The GPU path is the default; -Dblackvertex.backend=cpu forces the CPU
-        // path.
+        // Installs this version's GPU backend behind the shared interface, then registers the skinning pipeline
+        // before the loading screen compiles pipelines. The GPU path is the default; -Dblackvertex.backend=cpu
+        // forces the CPU path.
         BlackVertexGpu.backend = GpuCosmetics
         GpuCosmetics.init()
 

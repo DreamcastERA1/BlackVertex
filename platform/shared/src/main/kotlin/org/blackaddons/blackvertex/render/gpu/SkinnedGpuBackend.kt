@@ -282,8 +282,7 @@ internal abstract class SkinnedGpuBackend<T> : GpuBackend {
     protected abstract fun touchPipelines()
 
     /**
-     * Installs the hook that puts the draw into the frame: a Fabric FeatureRenderer on 26.2 and 26.3, nothing on
-     * 26.1.2, where a mixin does it.
+     * Installs the hook that puts the draw into the frame: a Fabric FeatureRenderer.
      */
     protected abstract fun installInjection()
 
@@ -296,8 +295,7 @@ internal abstract class SkinnedGpuBackend<T> : GpuBackend {
     protected abstract fun writeTransform(color: Vector4f): GpuBufferSlice
 
     /**
-     * Resolves Sampler0, the lightmap and the overlay for the frame (prepareTextures on 26.2 and 26.3, getTextures on
-     * 26.1.2).
+     * Resolves Sampler0, the lightmap and the overlay for the frame (prepareTextures).
      */
     protected abstract fun resolveTextures(setup: RenderSetup): T
 

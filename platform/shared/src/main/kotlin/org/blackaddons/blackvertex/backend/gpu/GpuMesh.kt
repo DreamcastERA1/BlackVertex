@@ -11,7 +11,7 @@ import java.nio.ByteOrder
 // pipeline that our own pipeline does not have.
 //
 // The upload and packing are version-neutral (shared). The vertex FORMAT is not here: it is built per platform (26.2
-// and 26.3 through GpuFormat, 26.1.2 through VertexFormatElement) and lives next to each pipeline.
+// and 26.3 through GpuFormat) and lives next to each pipeline.
 internal class GpuMesh private constructor(
     val vertexBuffer: GpuBuffer,
     val indexBuffer: GpuBuffer,
